@@ -7,7 +7,7 @@ COPY styles.css /usr/share/nginx/html/styles.css
 COPY script.js /usr/share/nginx/html/script.js
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 8003
+EXPOSE 80 8003
 
 # Use the default Nginx command to run the server
 CMD ["nginx", "-g", "daemon off;"]
