@@ -1,5 +1,5 @@
 const defaultTemplate = `<!-- ====== CARTE DES SOINS 2025 — RVB SPA (HTML template avec placeholders) ====== -->
-<section id="rvb-spa-carte-2025" lang="fr" style="--c1:#0f766e;--c2:#0ea5a4;--ink:#0b1320;--muted:#6b7280;--bg:#ffffff;--panel:#f8fafc;--ring:#e5e7eb; font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:var(--ink); background:var(--bg);">
+<section id="rvb-spa-carte-2025" lang="fr" style="--c1:#0f766e;--c2:#0ea5a4;--ink:#0b1320;--muted:#6b7280;--bg:#ffffff;--panel:#f8fafc;--ring:#e5e7eb;--item:#ffffff; font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:var(--ink); background:var(--bg);">
   <style>
     #rvb-spa-carte-2025 *{box-sizing:border-box}
     #rvb-spa-carte-2025 .wrap{max-width:1000px;margin:0 auto;padding:24px}
@@ -10,7 +10,7 @@ const defaultTemplate = `<!-- ====== CARTE DES SOINS 2025 — RVB SPA (HTML temp
     #rvb-spa-carte-2025 .panel{background:var(--panel);border:1px solid var(--ring);border-radius:14px;padding:16px}
     #rvb-spa-carte-2025 .grid{display:grid;gap:12px}
     @media (min-width:780px){#rvb-spa-carte-2025 .grid.cols-2{grid-template-columns:1fr 1fr}}
-    #rvb-spa-carte-2025 .item{background:#fff;border:1px solid var(--ring);border-radius:12px;padding:14px}
+    #rvb-spa-carte-2025 .item{background:var(--item,#fff);border:1px solid var(--ring);border-radius:12px;padding:14px}
     #rvb-spa-carte-2025 .row{display:flex;gap:10px;justify-content:space-between;align-items:flex-start}
     #rvb-spa-carte-2025 .title{font-weight:600}
     #rvb-spa-carte-2025 .subtitle{color:var(--muted);font-size:.95rem}
@@ -311,8 +311,66 @@ const defaultTemplate = `<!-- ====== CARTE DES SOINS 2025 — RVB SPA (HTML temp
 </section>
 <!-- ====== /CARTE DES SOINS 2025 ====== -->`;
 
+const DEFAULT_THEME = {
+  c1: '#0f766e',
+  c2: '#0ea5a4',
+  ink: '#0b1320',
+  muted: '#6b7280',
+  bg: '#ffffff',
+  panel: '#f8fafc',
+  ring: '#e5e7eb',
+  item: '#ffffff',
+};
+
+const THEME_FIELDS = [
+  {
+    key: 'c1',
+    label: 'Dégradé – Couleur 1',
+    hint: 'Première couleur utilisée pour le badge et les accents.',
+  },
+  {
+    key: 'c2',
+    label: 'Dégradé – Couleur 2',
+    hint: 'Seconde couleur du dégradé et de l’état survolé du sommaire.',
+  },
+  {
+    key: 'ink',
+    label: 'Texte principal',
+    hint: 'Couleur du texte global de la carte.',
+  },
+  {
+    key: 'muted',
+    label: 'Texte secondaire',
+    hint: 'Sous-titres, légendes et notes.',
+  },
+  {
+    key: 'bg',
+    label: 'Fond général',
+    hint: 'Arrière-plan global de la carte générée.',
+  },
+  {
+    key: 'panel',
+    label: 'Fond des panneaux',
+    hint: 'Cartouches englobant le sommaire et chaque section.',
+  },
+  {
+    key: 'item',
+    label: 'Fond des lignes',
+    hint: 'Cartes individuelles des prestations.',
+  },
+  {
+    key: 'ring',
+    label: 'Contours et séparateurs',
+    hint: 'Bordures des panneaux, lignes et puces du sommaire.',
+  },
+];
+
+const THEME_KEYS = THEME_FIELDS.map((field) => field.key);
+const THEME_KEY_SET = new Set(THEME_KEYS);
+
 let state = null;
 const headerEditor = document.getElementById('header-editor');
+const themeEditor = document.getElementById('theme-editor');
 const sectionsEditor = document.getElementById('sections-editor');
 const addSectionBtn = document.getElementById('add-section');
 const downloadBtn = document.getElementById('download-btn');
@@ -333,6 +391,7 @@ function initialise() {
   try {
     state = parseTemplate(defaultTemplate);
     renderHeaderEditor();
+    renderThemeEditor();
     renderSections();
     updatePreview();
   } catch (error) {
@@ -350,6 +409,23 @@ function parseTemplate(html) {
   if (!root) {
     throw new Error('Section principale introuvable.');
   }
+
+  const theme = { ...DEFAULT_THEME };
+  const styleAttr = root.getAttribute('style') || '';
+  styleAttr.split(';').forEach((declaration) => {
+    const separatorIndex = declaration.indexOf(':');
+    if (separatorIndex === -1) return;
+    const prop = declaration.slice(0, separatorIndex).trim();
+    const rawValue = declaration.slice(separatorIndex + 1);
+    if (rawValue == null) return;
+    if (!prop.startsWith('--')) return;
+    const key = prop.slice(2);
+    if (!THEME_KEY_SET.has(key)) return;
+    const value = rawValue.trim();
+    if (value) {
+      theme[key] = value;
+    }
+  });
 
   const headerEl = root.querySelector('header.panel');
   const h1 = headerEl?.querySelector('h1');
@@ -441,6 +517,7 @@ function parseTemplate(html) {
     header: headerData,
     sections,
     footerNote,
+    theme,
   };
 }
 
@@ -478,6 +555,50 @@ function renderHeaderEditor() {
   identityTextarea.value = state.header.identityLine;
   const footerTextarea = headerEditor.querySelector('textarea[data-footer-note]');
   footerTextarea.value = state.footerNote;
+}
+
+function renderThemeEditor() {
+  if (!themeEditor) return;
+  if (!state.theme) {
+    state.theme = { ...DEFAULT_THEME };
+  }
+
+  const colorFields = THEME_FIELDS.map((field) => {
+    const hintBlock = field.hint ? `<small>${field.hint}</small>` : '';
+    return `
+      <label class="color-field">
+        <span>${field.label}</span>
+        <div class="color-inputs">
+          <input type="color" data-theme-field="${field.key}" data-theme-input="color" />
+          <input type="text" data-theme-field="${field.key}" data-theme-input="text" />
+        </div>
+        ${hintBlock}
+      </label>
+    `;
+  }).join('\n');
+
+  themeEditor.innerHTML = `
+    <h3>Couleurs & apparence</h3>
+    <p>Personnalisez les couleurs des textes, des badges et des fonds pour adapter la carte à votre charte.</p>
+    <div class="theme-grid">
+      ${colorFields}
+    </div>
+  `;
+
+  const resolvedTheme = resolveTheme(state.theme);
+  THEME_FIELDS.forEach(({ key }) => {
+    const textInput = themeEditor.querySelector(`input[data-theme-field="${key}"][data-theme-input="text"]`);
+    const colorInput = themeEditor.querySelector(`input[data-theme-field="${key}"][data-theme-input="color"]`);
+    if (textInput) {
+      textInput.value = state.theme[key] ?? resolvedTheme[key];
+    }
+    if (colorInput) {
+      const normalised = normaliseColorForInput(resolvedTheme[key])
+        ?? normaliseColorForInput(DEFAULT_THEME[key])
+        ?? '#000000';
+      colorInput.value = normalised;
+    }
+  });
 }
 
 function renderSections(options = {}) {
@@ -662,6 +783,36 @@ function handleHeaderInput(event) {
   }
 }
 
+function handleThemeInput(event) {
+  const target = event.target;
+  const key = target.dataset.themeField;
+  if (!key) return;
+  if (!state.theme) {
+    state.theme = { ...DEFAULT_THEME };
+  }
+
+  if (target.dataset.themeInput === 'color') {
+    const value = target.value.trim();
+    state.theme[key] = value;
+    const textInput = themeEditor?.querySelector(`input[data-theme-field="${key}"][data-theme-input="text"]`);
+    if (textInput) {
+      textInput.value = value;
+    }
+  } else {
+    const value = target.value.trim();
+    state.theme[key] = value;
+    const colorInput = themeEditor?.querySelector(`input[data-theme-field="${key}"][data-theme-input="color"]`);
+    if (colorInput) {
+      const normalised = normaliseColorForInput(value);
+      if (normalised) {
+        colorInput.value = normalised;
+      }
+    }
+  }
+
+  updatePreview();
+}
+
 function escapeHtml(value) {
   if (value == null) return '';
   return value
@@ -676,7 +827,44 @@ function escapeAttribute(value) {
   return escapeHtml(value).replace(/`/g, '&#96;');
 }
 
+function normaliseColorForInput(value) {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) {
+    return trimmed.toLowerCase();
+  }
+  if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) {
+    return `#${trimmed
+      .slice(1)
+      .split('')
+      .map((char) => char + char)
+      .join('')
+      .toLowerCase()}`;
+  }
+  return null;
+}
+
+function resolveTheme(theme = {}) {
+  const resolved = {};
+  THEME_FIELDS.forEach(({ key }) => {
+    const raw = theme[key];
+    if (typeof raw === 'string') {
+      const trimmed = raw.trim();
+      resolved[key] = trimmed || DEFAULT_THEME[key];
+    } else if (raw != null && raw !== '') {
+      resolved[key] = String(raw);
+    } else {
+      resolved[key] = DEFAULT_THEME[key];
+    }
+  });
+  return resolved;
+}
+
 function generateHTML(state) {
+  const themeValues = resolveTheme(state.theme);
+  const cssVars = THEME_KEYS.map((key) => `--${key}:${themeValues[key]}`);
+  const rootStyle = `${cssVars.join(';')}; font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:var(--ink); background:var(--bg);`;
+
   const navLinks = state.sections
     .map((section) => `      <a href="#${escapeHtml(section.id)}">${escapeHtml(section.navLabel || section.title)}</a>`)
     .join('\n');
@@ -686,7 +874,7 @@ function generateHTML(state) {
     .join('\n\n');
 
   return `<!-- ====== CARTE DES SOINS 2025 — RVB SPA (HTML template avec placeholders) ====== -->
-<section id="rvb-spa-carte-2025" lang="fr" style="--c1:#0f766e;--c2:#0ea5a4;--ink:#0b1320;--muted:#6b7280;--bg:#ffffff;--panel:#f8fafc;--ring:#e5e7eb; font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:var(--ink); background:var(--bg);">
+<section id="rvb-spa-carte-2025" lang="fr" style="${escapeAttribute(rootStyle)}">
   <style>
     #rvb-spa-carte-2025 *{box-sizing:border-box}
     #rvb-spa-carte-2025 .wrap{max-width:1000px;margin:0 auto;padding:24px}
@@ -697,7 +885,7 @@ function generateHTML(state) {
     #rvb-spa-carte-2025 .panel{background:var(--panel);border:1px solid var(--ring);border-radius:14px;padding:16px}
     #rvb-spa-carte-2025 .grid{display:grid;gap:12px}
     @media (min-width:780px){#rvb-spa-carte-2025 .grid.cols-2{grid-template-columns:1fr 1fr}}
-    #rvb-spa-carte-2025 .item{background:#fff;border:1px solid var(--ring);border-radius:12px;padding:14px}
+    #rvb-spa-carte-2025 .item{background:var(--item,#fff);border:1px solid var(--ring);border-radius:12px;padding:14px}
     #rvb-spa-carte-2025 .row{display:flex;gap:10px;justify-content:space-between;align-items:flex-start}
     #rvb-spa-carte-2025 .title{font-weight:600}
     #rvb-spa-carte-2025 .subtitle{color:var(--muted);font-size:.95rem}
@@ -846,6 +1034,7 @@ function resetTemplate() {
   if (!confirm('Réinitialiser la carte au modèle original ?')) return;
   state = parseTemplate(defaultTemplate);
   renderHeaderEditor();
+  renderThemeEditor();
   renderSections();
   updatePreview();
 }
@@ -858,6 +1047,7 @@ function handleFileUpload(event) {
     try {
       state = parseTemplate(String(reader.result));
       renderHeaderEditor();
+      renderThemeEditor();
       renderSections();
       updatePreview();
     } catch (error) {
@@ -869,6 +1059,9 @@ function handleFileUpload(event) {
 }
 
 headerEditor.addEventListener('input', handleHeaderInput);
+if (themeEditor) {
+  themeEditor.addEventListener('input', handleThemeInput);
+}
 sectionsEditor.addEventListener('input', handleSectionInput);
 sectionsEditor.addEventListener('click', handleSectionClick);
 addSectionBtn.addEventListener('click', addSection);
