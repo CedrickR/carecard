@@ -48,9 +48,12 @@
     </main>
 
     <template id="section-template">
-      <details class="section-editor" open>
+      <details class="section-editor">
         <summary>
-          <span class="section-label"></span>
+          <div class="summary-main">
+            <span class="summary-chevron" aria-hidden="true"></span>
+            <span class="section-label"></span>
+          </div>
           <button type="button" class="delete-section">Supprimer</button>
         </summary>
         <div class="section-form">

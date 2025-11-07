@@ -322,6 +322,13 @@ const previewFrame = document.getElementById('preview-frame');
 const sectionTemplate = document.getElementById('section-template');
 const itemTemplate = document.getElementById('item-template');
 
+function createUid() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `section-${Math.random().toString(36).slice(2, 10)}-${Date.now()}`;
+}
+
 function initialise() {
   try {
     state = parseTemplate(defaultTemplate);
@@ -424,6 +431,7 @@ function parseTemplate(html) {
       layout,
       navLabel: navMap.get(sectionId) || title,
       items,
+      uid: createUid(),
     });
   });
 
@@ -472,18 +480,37 @@ function renderHeaderEditor() {
   footerTextarea.value = state.footerNote;
 }
 
-function renderSections() {
+function renderSections(options = {}) {
+  const { forceOpenUid = null } = options;
+  const previouslyOpen = new Set(
+    Array.from(sectionsEditor.querySelectorAll('.section-editor'))
+      .filter((section) => section.open)
+      .map((section) => section.dataset.uid)
+  );
+
   sectionsEditor.innerHTML = '';
   state.sections.forEach((section, index) => {
+    if (!section.uid) {
+      section.uid = createUid();
+    }
+
     const sectionNode = sectionTemplate.content.firstElementChild.cloneNode(true);
     sectionNode.dataset.index = index;
+    sectionNode.dataset.uid = section.uid;
+    if (forceOpenUid && section.uid === forceOpenUid) {
+      sectionNode.open = true;
+    } else if (previouslyOpen.has(section.uid)) {
+      sectionNode.open = true;
+    }
+
     const label = section.title || `Section ${index + 1}`;
     sectionNode.querySelector('.section-label').textContent = label;
 
     const sectionForm = sectionNode.querySelector('.section-form');
-    sectionForm.querySelector('input[data-field="id"]').value = section.id;
-    sectionForm.querySelector('input[data-field="id"]').setAttribute('aria-label', `Identifiant de la section ${label}`);
-    sectionForm.querySelector('input[data-field="title"]').value = section.title;
+    const idInput = sectionForm.querySelector('input[data-field="id"]');
+    idInput.value = section.id || '';
+    idInput.setAttribute('aria-label', `Identifiant de la section ${label}`);
+    sectionForm.querySelector('input[data-field="title"]').value = section.title || '';
     sectionForm.querySelector('input[data-field="navLabel"]').value = section.navLabel || '';
     sectionForm.querySelector('textarea[data-field="note"]').value = section.note || '';
     const layoutSelect = sectionForm.querySelector('select[data-field="layout"]');
@@ -498,10 +525,10 @@ function renderSections() {
     section.items.forEach((item, itemIndex) => {
       const itemNode = itemTemplate.content.firstElementChild.cloneNode(true);
       itemNode.dataset.index = itemIndex;
-      itemNode.querySelector('input[data-field="title"]').value = item.title;
-      itemNode.querySelector('input[data-field="subtitle"]').value = item.subtitle;
-      itemNode.querySelector('input[data-field="duration"]').value = item.duration;
-      itemNode.querySelector('input[data-field="price"]').value = item.price;
+      itemNode.querySelector('input[data-field="title"]').value = item.title || '';
+      itemNode.querySelector('input[data-field="subtitle"]').value = item.subtitle || '';
+      itemNode.querySelector('input[data-field="duration"]').value = item.duration || '';
+      itemNode.querySelector('input[data-field="price"]').value = item.price || '';
       itemNode.querySelector('input[data-field="spanFull"]').checked = Boolean(item.spanFull);
       itemNode.querySelector('select[data-field="metaOrder"]').value = item.metaOrder || 'duration-first';
       itemsContainer.appendChild(itemNode);
@@ -513,7 +540,7 @@ function renderSections() {
 
 function addSection() {
   const index = state.sections.length + 1;
-  state.sections.push({
+  const newSection = {
     id: `section-${index}`,
     headingTag: 'h2',
     headingId: `h-section-${index}`,
@@ -531,8 +558,10 @@ function addSection() {
         metaOrder: 'duration-first',
       },
     ],
-  });
-  renderSections();
+    uid: createUid(),
+  };
+  state.sections.push(newSection);
+  renderSections({ forceOpenUid: newSection.uid });
   updatePreview();
 }
 
