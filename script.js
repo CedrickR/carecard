@@ -1,32 +1,158 @@
 const defaultTemplate = `<!-- ====== CARTE DES SOINS 2025 — RVB SPA (HTML template avec placeholders) ====== -->
-<section id="rvb-spa-carte-2025" lang="fr" style="--accent:#0f766e;--accentSoft:#0ea5a4;--ink:#0b1320;--muted:#6b7280;--bg:#ffffff;--panel:#f8fafc;--ring:#e5e7eb;--item:#ffffff; font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:var(--ink); background:var(--bg);">
+<section id="rvb-spa-carte-2025" lang="fr"
+  style="--c1:#0f766e;
+         --c2:#0ea5a4;
+         --ink:#0b1320;
+         --muted:#6b7280;
+         --bg:#ffffff;
+         --panel:#f8fafc;
+         --item:#ffffff;
+         --ring:#e5e7eb;
+         font-family:'Montserrat', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+         color:var(--ink);
+         background:var(--bg);">
+
+  <!-- Import de la police Montserrat -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <style>
-    #rvb-spa-carte-2025 *{box-sizing:border-box}
-    #rvb-spa-carte-2025 .wrap{max-width:1000px;margin:0 auto;padding:24px}
-    #rvb-spa-carte-2025 h1{font-size:clamp(1.6rem,2vw,2rem);margin:.2rem 0 .8rem}
-    #rvb-spa-carte-2025 h2{font-size:clamp(1.25rem,1.8vw,1.5rem);margin:1.4rem 0 .6rem}
-    #rvb-spa-carte-2025 h3{font-size:1.05rem;margin:1rem 0 .4rem}
-    #rvb-spa-carte-2025 p.lead{color:var(--muted);margin:.1rem 0 .35rem}
-    #rvb-spa-carte-2025 .panel{background:var(--panel);border:1px solid var(--ring);border-radius:14px;padding:16px}
-    #rvb-spa-carte-2025 .grid{display:grid;gap:12px}
-    @media (min-width:780px){#rvb-spa-carte-2025 .grid.cols-2{grid-template-columns:1fr 1fr}}
-    #rvb-spa-carte-2025 .item{background:var(--item,#fff);border:1px solid var(--ring);border-radius:12px;padding:14px}
-    #rvb-spa-carte-2025 .row{display:flex;gap:10px;justify-content:space-between;align-items:flex-start}
-    #rvb-spa-carte-2025 .title{font-weight:600}
-    #rvb-spa-carte-2025 .subtitle{color:var(--muted);font-size:.95rem}
-    #rvb-spa-carte-2025 .meta{white-space:nowrap; text-align:right; font-variant-numeric: tabular-nums;}
-    #rvb-spa-carte-2025 .meta .dur{color:var(--muted); display:block}
-    #rvb-spa-carte-2025 .toc a{display:inline-block;margin:.2rem .4rem .2rem 0;padding:.35rem .65rem;border:1px solid var(--ring);border-radius:999px;color:inherit;text-decoration:none;transition:background-color .2s ease,border-color .2s ease,color .2s ease}
-    #rvb-spa-carte-2025 .toc a:hover{border-color:var(--accent);background:var(--accentSoft);color:#fff}
-    #rvb-spa-carte-2025 small.mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; color:var(--muted)}
-    #rvb-spa-carte-2025 .note{font-size:.9rem;color:var(--muted)}
+    #rvb-spa-carte-2025 * {
+      box-sizing: border-box;
+      font-family: 'Montserrat', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    #rvb-spa-carte-2025 .wrap {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    #rvb-spa-carte-2025 h1 {
+      font-size: clamp(1.6rem, 2vw, 2rem);
+      margin: .2rem 0 .8rem;
+      font-weight: 600;
+    }
+
+    #rvb-spa-carte-2025 h2 {
+      font-size: clamp(1.25rem, 1.8vw, 1.5rem);
+      margin: 1.4rem 0 .6rem;
+      font-weight: 600;
+    }
+
+    #rvb-spa-carte-2025 h3 {
+      font-size: 1.05rem;
+      margin: 1rem 0 .4rem;
+      font-weight: 500;
+    }
+
+    #rvb-spa-carte-2025 p.lead {
+      color: var(--muted);
+      margin: .1rem 0 .35rem;
+      font-weight: 400;
+    }
+
+    #rvb-spa-carte-2025 .panel {
+      background: var(--panel);
+      border: 1px solid var(--ring);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    #rvb-spa-carte-2025 .grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    @media (min-width:780px) {
+      #rvb-spa-carte-2025 .grid.cols-2 {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    #rvb-spa-carte-2025 .item {
+      background: var(--item, #fff);
+      border: 1px solid var(--ring);
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    #rvb-spa-carte-2025 .row {
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    #rvb-spa-carte-2025 .title {
+      font-weight: 600;
+    }
+
+    #rvb-spa-carte-2025 .subtitle {
+      color: var(--muted);
+      font-size: .95rem;
+      font-weight: 400;
+    }
+
+    #rvb-spa-carte-2025 .meta {
+      white-space: nowrap;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #rvb-spa-carte-2025 .meta .dur {
+      color: var(--muted);
+      display: block;
+      font-weight: 400;
+    }
+
+    #rvb-spa-carte-2025 .badge {
+      display: inline-block;
+      padding: .2rem .5rem;
+      border-radius: 8px;
+      background: linear-gradient(90deg, var(--c1), var(--c2));
+      color: #fff;
+      font-size: .78rem;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+    }
+
+    #rvb-spa-carte-2025 .toc a {
+      display: inline-block;
+      margin: .2rem .4rem .2rem 0;
+      padding: .35rem .65rem;
+      border: 1px solid var(--ring);
+      border-radius: 999px;
+      color: inherit;
+      text-decoration: none;
+      font-weight: 500;
+      transition: border-color .2s, color .2s;
+    }
+
+    #rvb-spa-carte-2025 .toc a:hover {
+      border-color: var(--c2);
+      color: var(--c2);
+    }
+
+    #rvb-spa-carte-2025 small.mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      color: var(--muted);
+    }
+
+    #rvb-spa-carte-2025 .note {
+      font-size: .9rem;
+      color: var(--muted);
+      font-weight: 400;
+    }
   </style>
+
 
   <div class="wrap">
     <header class="panel" style="display:flex;gap:14px;align-items:center;justify-content:space-between;">
-      <div>
-        <h1>Carte des soins 2025</h1>
-        <p class="lead">Bien-être &amp; rituels — version HTML</p>
+      <div style="display:flex;gap:12px;align-items:center;">
+        <div>
+          <h1>Carte des soins 2025</h1>
+          <p class="lead">Bien-être &amp; rituels — version HTML</p>
+        </div>
       </div>
       <div>
         <small class="mono">Devise : dh (MAD) • Durées en minutes</small>
@@ -306,8 +432,8 @@ const defaultTemplate = `<!-- ====== CARTE DES SOINS 2025 — RVB SPA (HTML temp
 <!-- ====== /CARTE DES SOINS 2025 ====== -->`;
 
 const DEFAULT_THEME = {
-  accent: '#0f766e',
-  accentSoft: '#0ea5a4',
+  c1: '#0f766e',
+  c2: '#0ea5a4',
   ink: '#0b1320',
   muted: '#6b7280',
   bg: '#ffffff',
@@ -318,14 +444,14 @@ const DEFAULT_THEME = {
 
 const THEME_FIELDS = [
   {
-    key: 'accent',
-    label: 'Accent principal',
-    hint: 'Liens actifs, éléments interactifs et accents visuels.',
+    key: 'c1',
+    label: 'Dégradé gauche (C1)',
+    hint: 'Couleur principale du dégradé et des badges éventuels.',
   },
   {
-    key: 'accentSoft',
-    label: 'Accent doux',
-    hint: 'Teinte utilisée pour le survol du sommaire et les aplats légers.',
+    key: 'c2',
+    label: 'Dégradé droit (C2)',
+    hint: 'Couleur secondaire du dégradé et des survols du sommaire.',
   },
   {
     key: 'ink',
@@ -414,8 +540,8 @@ function parseTemplate(html) {
     if (rawValue == null) return;
     if (!prop.startsWith('--')) return;
     let key = prop.slice(2);
-    if (key === 'c1') key = 'accent';
-    if (key === 'c2') key = 'accentSoft';
+    if (key === 'accent') key = 'c1';
+    if (key === 'accentSoft') key = 'c2';
     if (!THEME_KEY_SET.has(key)) return;
     const value = rawValue.trim();
     if (value) {
@@ -573,7 +699,7 @@ function renderThemeEditor() {
 
   themeEditor.innerHTML = `
     <h3>Couleurs & apparence</h3>
-    <p>Personnalisez les couleurs des textes, des accents et des fonds pour adapter la carte à votre charte.</p>
+    <p>Personnalisez les couleurs du dégradé, des textes et des fonds pour adapter la carte à votre charte.</p>
     <div class="theme-grid">
       ${colorFields}
     </div>
@@ -856,8 +982,12 @@ function resolveTheme(theme = {}) {
 
 function generateHTML(state) {
   const themeValues = resolveTheme(state.theme);
-  const cssVars = THEME_KEYS.map((key) => `--${key}:${themeValues[key]}`);
-  const rootStyle = `${cssVars.join(';')}; font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:var(--ink); background:var(--bg);`;
+  const cssVarLines = THEME_KEYS.map((key) => `         --${key}:${themeValues[key]};`);
+  const rootStyle = `
+${cssVarLines.join('\n')}
+         font-family:'Montserrat', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+         color:var(--ink);
+         background:var(--bg);`;
 
   const navLinks = state.sections
     .map((section) => `      <a href="#${escapeHtml(section.id)}">${escapeHtml(section.navLabel || section.title)}</a>`)
@@ -880,33 +1010,148 @@ function generateHTML(state) {
 
   return `<!-- ====== CARTE DES SOINS 2025 — RVB SPA (HTML template avec placeholders) ====== -->
 <section id="rvb-spa-carte-2025" lang="fr" style="${escapeAttribute(rootStyle)}">
+
+  <!-- Import de la police Montserrat -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <style>
-    #rvb-spa-carte-2025 *{box-sizing:border-box}
-    #rvb-spa-carte-2025 .wrap{max-width:1000px;margin:0 auto;padding:24px}
-    #rvb-spa-carte-2025 h1{font-size:clamp(1.6rem,2vw,2rem);margin:.2rem 0 .8rem}
-    #rvb-spa-carte-2025 h2{font-size:clamp(1.25rem,1.8vw,1.5rem);margin:1.4rem 0 .6rem}
-    #rvb-spa-carte-2025 h3{font-size:1.05rem;margin:1rem 0 .4rem}
-    #rvb-spa-carte-2025 p.lead{color:var(--muted);margin:.1rem 0 .35rem}
-    #rvb-spa-carte-2025 .panel{background:var(--panel);border:1px solid var(--ring);border-radius:14px;padding:16px}
-    #rvb-spa-carte-2025 .grid{display:grid;gap:12px}
-    @media (min-width:780px){#rvb-spa-carte-2025 .grid.cols-2{grid-template-columns:1fr 1fr}}
-    #rvb-spa-carte-2025 .item{background:var(--item,#fff);border:1px solid var(--ring);border-radius:12px;padding:14px}
-    #rvb-spa-carte-2025 .row{display:flex;gap:10px;justify-content:space-between;align-items:flex-start}
-    #rvb-spa-carte-2025 .title{font-weight:600}
-    #rvb-spa-carte-2025 .subtitle{color:var(--muted);font-size:.95rem}
-    #rvb-spa-carte-2025 .meta{white-space:nowrap; text-align:right; font-variant-numeric: tabular-nums;}
-    #rvb-spa-carte-2025 .meta .dur{color:var(--muted); display:block}
-    #rvb-spa-carte-2025 .toc a{display:inline-block;margin:.2rem .4rem .2rem 0;padding:.35rem .65rem;border:1px solid var(--ring);border-radius:999px;color:inherit;text-decoration:none;transition:background-color .2s ease,border-color .2s ease,color .2s ease}
-    #rvb-spa-carte-2025 .toc a:hover{border-color:var(--accent);background:var(--accentSoft);color:#fff}
-    #rvb-spa-carte-2025 small.mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; color:var(--muted)}
-    #rvb-spa-carte-2025 .note{font-size:.9rem;color:var(--muted)}
+    #rvb-spa-carte-2025 * {
+      box-sizing: border-box;
+      font-family: 'Montserrat', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    #rvb-spa-carte-2025 .wrap {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    #rvb-spa-carte-2025 h1 {
+      font-size: clamp(1.6rem, 2vw, 2rem);
+      margin: .2rem 0 .8rem;
+      font-weight: 600;
+    }
+
+    #rvb-spa-carte-2025 h2 {
+      font-size: clamp(1.25rem, 1.8vw, 1.5rem);
+      margin: 1.4rem 0 .6rem;
+      font-weight: 600;
+    }
+
+    #rvb-spa-carte-2025 h3 {
+      font-size: 1.05rem;
+      margin: 1rem 0 .4rem;
+      font-weight: 500;
+    }
+
+    #rvb-spa-carte-2025 p.lead {
+      color: var(--muted);
+      margin: .1rem 0 .35rem;
+      font-weight: 400;
+    }
+
+    #rvb-spa-carte-2025 .panel {
+      background: var(--panel);
+      border: 1px solid var(--ring);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    #rvb-spa-carte-2025 .grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    @media (min-width:780px) {
+      #rvb-spa-carte-2025 .grid.cols-2 {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    #rvb-spa-carte-2025 .item {
+      background: var(--item, #fff);
+      border: 1px solid var(--ring);
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    #rvb-spa-carte-2025 .row {
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    #rvb-spa-carte-2025 .title {
+      font-weight: 600;
+    }
+
+    #rvb-spa-carte-2025 .subtitle {
+      color: var(--muted);
+      font-size: .95rem;
+      font-weight: 400;
+    }
+
+    #rvb-spa-carte-2025 .meta {
+      white-space: nowrap;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #rvb-spa-carte-2025 .meta .dur {
+      color: var(--muted);
+      display: block;
+      font-weight: 400;
+    }
+
+    #rvb-spa-carte-2025 .badge {
+      display: inline-block;
+      padding: .2rem .5rem;
+      border-radius: 8px;
+      background: linear-gradient(90deg, var(--c1), var(--c2));
+      color: #fff;
+      font-size: .78rem;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+    }
+
+    #rvb-spa-carte-2025 .toc a {
+      display: inline-block;
+      margin: .2rem .4rem .2rem 0;
+      padding: .35rem .65rem;
+      border: 1px solid var(--ring);
+      border-radius: 999px;
+      color: inherit;
+      text-decoration: none;
+      font-weight: 500;
+      transition: border-color .2s, color .2s;
+    }
+
+    #rvb-spa-carte-2025 .toc a:hover {
+      border-color: var(--c2);
+      color: var(--c2);
+    }
+
+    #rvb-spa-carte-2025 small.mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      color: var(--muted);
+    }
+
+    #rvb-spa-carte-2025 .note {
+      font-size: .9rem;
+      color: var(--muted);
+      font-weight: 400;
+    }
   </style>
+
 
   <div class="wrap">
     <header class="panel" style="display:flex;gap:14px;align-items:center;justify-content:space-between;">
-      <div>
-        <h1>${escapeHtml(state.header.cardTitle)}</h1>
-${leadHtml}      </div>
+      <div style="display:flex;gap:12px;align-items:center;">
+        <div>
+          <h1>${escapeHtml(state.header.cardTitle)}</h1>
+${leadHtml}        </div>
+      </div>
 ${currencyNoteHtml}    </header>
 
     <!-- Table des matières -->
