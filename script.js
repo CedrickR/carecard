@@ -1,5 +1,5 @@
 const defaultTemplate = `<!-- ====== CARTE DES SOINS 2025 — RVB SPA (HTML template avec placeholders) ====== -->
-<section id="rvb-spa-carte-2025" lang="fr" style="--c1:#0f766e;--c2:#0ea5a4;--ink:#0b1320;--muted:#6b7280;--bg:#ffffff;--panel:#f8fafc;--ring:#e5e7eb;--item:#ffffff; font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:var(--ink); background:var(--bg);">
+<section id="rvb-spa-carte-2025" lang="fr" style="--accent:#0f766e;--accentSoft:#0ea5a4;--ink:#0b1320;--muted:#6b7280;--bg:#ffffff;--panel:#f8fafc;--ring:#e5e7eb;--item:#ffffff; font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:var(--ink); background:var(--bg);">
   <style>
     #rvb-spa-carte-2025 *{box-sizing:border-box}
     #rvb-spa-carte-2025 .wrap{max-width:1000px;margin:0 auto;padding:24px}
@@ -16,23 +16,17 @@ const defaultTemplate = `<!-- ====== CARTE DES SOINS 2025 — RVB SPA (HTML temp
     #rvb-spa-carte-2025 .subtitle{color:var(--muted);font-size:.95rem}
     #rvb-spa-carte-2025 .meta{white-space:nowrap; text-align:right; font-variant-numeric: tabular-nums;}
     #rvb-spa-carte-2025 .meta .dur{color:var(--muted); display:block}
-    #rvb-spa-carte-2025 .badge{display:inline-block;padding:.2rem .5rem;border-radius:8px;background:linear-gradient(90deg,var(--c1),var(--c2));color:#fff;font-size:.78rem}
-    #rvb-spa-carte-2025 .toc a{display:inline-block;margin:.2rem .4rem .2rem 0;padding:.35rem .65rem;border:1px solid var(--ring);border-radius:999px;color:inherit;text-decoration:none}
-    #rvb-spa-carte-2025 .toc a:hover{border-color:var(--c2)}
+    #rvb-spa-carte-2025 .toc a{display:inline-block;margin:.2rem .4rem .2rem 0;padding:.35rem .65rem;border:1px solid var(--ring);border-radius:999px;color:inherit;text-decoration:none;transition:background-color .2s ease,border-color .2s ease,color .2s ease}
+    #rvb-spa-carte-2025 .toc a:hover{border-color:var(--accent);background:var(--accentSoft);color:#fff}
     #rvb-spa-carte-2025 small.mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; color:var(--muted)}
     #rvb-spa-carte-2025 .note{font-size:.9rem;color:var(--muted)}
   </style>
 
   <div class="wrap">
     <header class="panel" style="display:flex;gap:14px;align-items:center;justify-content:space-between;">
-      <div style="display:flex;gap:12px;align-items:center;">
-        <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--c1),var(--c2));"></div>
-        <div>
-          <h1>Carte des soins 2025 <span class="badge">RVB • SPA</span></h1>
-          <p class="lead">Bien-être &amp; rituels — version HTML</p>
-          <!-- Ligne identité alimentée par placeholders -->
-          <p class="lead">Pour <strong>{{prenom}} {{nom}}</strong> — {{email}}{{country_line}}</p>
-        </div>
+      <div>
+        <h1>Carte des soins 2025</h1>
+        <p class="lead">Bien-être &amp; rituels — version HTML</p>
       </div>
       <div>
         <small class="mono">Devise : dh (MAD) • Durées en minutes</small>
@@ -312,8 +306,8 @@ const defaultTemplate = `<!-- ====== CARTE DES SOINS 2025 — RVB SPA (HTML temp
 <!-- ====== /CARTE DES SOINS 2025 ====== -->`;
 
 const DEFAULT_THEME = {
-  c1: '#0f766e',
-  c2: '#0ea5a4',
+  accent: '#0f766e',
+  accentSoft: '#0ea5a4',
   ink: '#0b1320',
   muted: '#6b7280',
   bg: '#ffffff',
@@ -324,14 +318,14 @@ const DEFAULT_THEME = {
 
 const THEME_FIELDS = [
   {
-    key: 'c1',
-    label: 'Dégradé – Couleur 1',
-    hint: 'Première couleur utilisée pour le badge et les accents.',
+    key: 'accent',
+    label: 'Accent principal',
+    hint: 'Liens actifs, éléments interactifs et accents visuels.',
   },
   {
-    key: 'c2',
-    label: 'Dégradé – Couleur 2',
-    hint: 'Seconde couleur du dégradé et de l’état survolé du sommaire.',
+    key: 'accentSoft',
+    label: 'Accent doux',
+    hint: 'Teinte utilisée pour le survol du sommaire et les aplats légers.',
   },
   {
     key: 'ink',
@@ -419,7 +413,9 @@ function parseTemplate(html) {
     const rawValue = declaration.slice(separatorIndex + 1);
     if (rawValue == null) return;
     if (!prop.startsWith('--')) return;
-    const key = prop.slice(2);
+    let key = prop.slice(2);
+    if (key === 'c1') key = 'accent';
+    if (key === 'c2') key = 'accentSoft';
     if (!THEME_KEY_SET.has(key)) return;
     const value = rawValue.trim();
     if (value) {
@@ -429,15 +425,25 @@ function parseTemplate(html) {
 
   const headerEl = root.querySelector('header.panel');
   const h1 = headerEl?.querySelector('h1');
-  const badge = h1?.querySelector('.badge');
-  const [leadLine, identityLine] = headerEl?.querySelectorAll('p.lead') ?? [];
+  const leadNodes = headerEl ? Array.from(headerEl.querySelectorAll('p.lead')) : [];
   const currencyNote = headerEl?.querySelector('small.mono');
 
   const headerData = {
-    cardTitle: h1 ? h1.childNodes[0].textContent.trim() : '',
-    badgeText: badge ? badge.textContent.trim() : '',
-    lead: leadLine ? leadLine.textContent.trim() : '',
-    identityLine: identityLine ? identityLine.innerHTML.trim() : '',
+    cardTitle: (() => {
+      if (!h1) return '';
+      const badge = h1.querySelector('.badge');
+      if (badge && h1.childNodes.length) {
+        const firstNode = Array.from(h1.childNodes).find((node) => node.nodeType === Node.TEXT_NODE);
+        return firstNode ? firstNode.textContent.trim() : h1.textContent.trim();
+      }
+      return h1.textContent.trim();
+    })(),
+    lead: leadNodes.length
+      ? leadNodes
+          .map((node) => node.textContent.trim())
+          .filter(Boolean)
+          .join('\n')
+      : '',
     currencyNote: currencyNote ? currencyNote.textContent.trim() : '',
   };
 
@@ -524,23 +530,13 @@ function parseTemplate(html) {
 function renderHeaderEditor() {
   headerEditor.innerHTML = `
     <h3>En-tête de la carte</h3>
-    <div class="field-group">
-      <label>
-        Titre principal
-        <input type="text" data-header-field="cardTitle" value="${escapeAttribute(state.header.cardTitle)}" />
-      </label>
-      <label>
-        Texte du badge
-        <input type="text" data-header-field="badgeText" value="${escapeAttribute(state.header.badgeText)}" />
-      </label>
-    </div>
     <label>
-      Sous-titre
-      <input type="text" data-header-field="lead" value="${escapeAttribute(state.header.lead)}" />
+      Titre principal
+      <input type="text" data-header-field="cardTitle" value="${escapeAttribute(state.header.cardTitle)}" />
     </label>
     <label>
-      Ligne d'identité (HTML autorisé)
-      <textarea rows="3" data-header-field="identityLine"></textarea>
+      Sous-titre / accroche (saisir un retour à la ligne pour une seconde phrase)
+      <textarea rows="2" data-header-field="lead">${escapeHtml(state.header.lead)}</textarea>
     </label>
     <label>
       Note sur la devise
@@ -551,8 +547,6 @@ function renderHeaderEditor() {
       <textarea rows="2" data-footer-note></textarea>
     </label>
   `;
-  const identityTextarea = headerEditor.querySelector('textarea[data-header-field="identityLine"]');
-  identityTextarea.value = state.header.identityLine;
   const footerTextarea = headerEditor.querySelector('textarea[data-footer-note]');
   footerTextarea.value = state.footerNote;
 }
@@ -579,7 +573,7 @@ function renderThemeEditor() {
 
   themeEditor.innerHTML = `
     <h3>Couleurs & apparence</h3>
-    <p>Personnalisez les couleurs des textes, des badges et des fonds pour adapter la carte à votre charte.</p>
+    <p>Personnalisez les couleurs des textes, des accents et des fonds pour adapter la carte à votre charte.</p>
     <div class="theme-grid">
       ${colorFields}
     </div>
@@ -873,6 +867,17 @@ function generateHTML(state) {
     .map((section) => generateSectionHtml(section))
     .join('\n\n');
 
+  const leadLines = (state.header.lead || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  const leadHtml = leadLines.length
+    ? `        <p class="lead">${leadLines.map((line) => escapeHtml(line)).join('<br />')}</p>\n`
+    : '';
+  const currencyNoteHtml = state.header.currencyNote
+    ? `      <div>\n        <small class="mono">${escapeHtml(state.header.currencyNote)}</small>\n      </div>\n`
+    : '';
+
   return `<!-- ====== CARTE DES SOINS 2025 — RVB SPA (HTML template avec placeholders) ====== -->
 <section id="rvb-spa-carte-2025" lang="fr" style="${escapeAttribute(rootStyle)}">
   <style>
@@ -891,28 +896,18 @@ function generateHTML(state) {
     #rvb-spa-carte-2025 .subtitle{color:var(--muted);font-size:.95rem}
     #rvb-spa-carte-2025 .meta{white-space:nowrap; text-align:right; font-variant-numeric: tabular-nums;}
     #rvb-spa-carte-2025 .meta .dur{color:var(--muted); display:block}
-    #rvb-spa-carte-2025 .badge{display:inline-block;padding:.2rem .5rem;border-radius:8px;background:linear-gradient(90deg,var(--c1),var(--c2));color:#fff;font-size:.78rem}
-    #rvb-spa-carte-2025 .toc a{display:inline-block;margin:.2rem .4rem .2rem 0;padding:.35rem .65rem;border:1px solid var(--ring);border-radius:999px;color:inherit;text-decoration:none}
-    #rvb-spa-carte-2025 .toc a:hover{border-color:var(--c2)}
+    #rvb-spa-carte-2025 .toc a{display:inline-block;margin:.2rem .4rem .2rem 0;padding:.35rem .65rem;border:1px solid var(--ring);border-radius:999px;color:inherit;text-decoration:none;transition:background-color .2s ease,border-color .2s ease,color .2s ease}
+    #rvb-spa-carte-2025 .toc a:hover{border-color:var(--accent);background:var(--accentSoft);color:#fff}
     #rvb-spa-carte-2025 small.mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; color:var(--muted)}
     #rvb-spa-carte-2025 .note{font-size:.9rem;color:var(--muted)}
   </style>
 
   <div class="wrap">
     <header class="panel" style="display:flex;gap:14px;align-items:center;justify-content:space-between;">
-      <div style="display:flex;gap:12px;align-items:center;">
-        <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--c1),var(--c2));"></div>
-        <div>
-          <h1>${escapeHtml(state.header.cardTitle)} <span class="badge">${escapeHtml(state.header.badgeText)}</span></h1>
-          <p class="lead">${escapeHtml(state.header.lead)}</p>
-          <!-- Ligne identité alimentée par placeholders -->
-          <p class="lead">${state.header.identityLine}</p>
-        </div>
-      </div>
       <div>
-        <small class="mono">${escapeHtml(state.header.currencyNote)}</small>
-      </div>
-    </header>
+        <h1>${escapeHtml(state.header.cardTitle)}</h1>
+${leadHtml}      </div>
+${currencyNoteHtml}    </header>
 
     <!-- Table des matières -->
     <nav class="toc" aria-label="Sommaire" style="margin:14px 0 6px">
