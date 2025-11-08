@@ -431,6 +431,130 @@ const defaultTemplate = `<!-- ====== CARTE DES SOINS 2025 — RVB SPA (HTML temp
 </section>
 <!-- ====== /CARTE DES SOINS 2025 ====== -->`;
 
+const LANGUAGES = [
+  { code: 'fr', label: 'Français', flag: '🇫🇷' },
+  { code: 'en', label: 'English', flag: '🇬🇧' },
+];
+
+function createEmptyLangText() {
+  return LANGUAGES.reduce((acc, { code }) => {
+    acc[code] = '';
+    return acc;
+  }, {});
+}
+
+function normaliseLangValue(value) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const result = createEmptyLangText();
+    LANGUAGES.forEach(({ code }) => {
+      const raw = value[code];
+      result[code] = raw != null ? String(raw) : '';
+    });
+    return result;
+  }
+  const text = value != null ? String(value) : '';
+  const trimmed = text.trim();
+  const result = createEmptyLangText();
+  LANGUAGES.forEach(({ code }) => {
+    result[code] = trimmed;
+  });
+  return result;
+}
+
+function hasLangValue(value) {
+  const normalised = normaliseLangValue(value);
+  return LANGUAGES.some(({ code }) => (normalised[code] || '').trim().length > 0);
+}
+
+function splitBilingualText(text) {
+  const result = createEmptyLangText();
+  if (!text) {
+    return result;
+  }
+  const trimmed = text.trim();
+  const match = trimmed.match(/^(.*?)\s*\/\s*(.*)$/s);
+  if (match) {
+    result.fr = match[1].trim();
+    result.en = match[2].trim();
+  } else {
+    LANGUAGES.forEach(({ code }) => {
+      result[code] = trimmed;
+    });
+  }
+  return result;
+}
+
+function parseLangNode(node) {
+  const fallback = createEmptyLangText();
+  if (!node) {
+    return fallback;
+  }
+  let found = false;
+  const result = createEmptyLangText();
+  LANGUAGES.forEach(({ code }) => {
+    const span = node.querySelector(`:scope > .lang.lang-${code}`);
+    if (span) {
+      result[code] = span.textContent.trim();
+      found = true;
+    }
+  });
+  if (found) {
+    return result;
+  }
+  const textContent = node.textContent.trim();
+  if (!textContent) {
+    return fallback;
+  }
+  return normaliseLangValue(splitBilingualText(textContent));
+}
+
+function mergeLangNodes(accumulator, addition) {
+  const acc = normaliseLangValue(accumulator);
+  const add = normaliseLangValue(addition);
+  const result = createEmptyLangText();
+  LANGUAGES.forEach(({ code }) => {
+    const accValue = acc[code] ? acc[code].trim() : '';
+    const addValue = add[code] ? add[code].trim() : '';
+    if (accValue && addValue) {
+      result[code] = `${accValue}\n${addValue}`;
+    } else {
+      result[code] = accValue || addValue;
+    }
+  });
+  return result;
+}
+
+function formatLangValue(value, multiline = false) {
+  const safe = escapeHtml(value ?? '');
+  if (!multiline) {
+    return safe;
+  }
+  return safe.replace(/\r?\n/g, '<br />');
+}
+
+function renderLangInline(value, options = {}) {
+  const { strong = false, multiline = false, wrapperTag = 'span', className = '' } = options;
+  const normalised = normaliseLangValue(value);
+  return LANGUAGES.map(({ code }) => {
+    const classes = ['lang', `lang-${code}`];
+    if (className) {
+      classes.push(className);
+    }
+    const content = formatLangValue(normalised[code], multiline);
+    const inner = strong ? `<strong>${content}</strong>` : content;
+    return `<${wrapperTag} class="${classes.join(' ')}">${inner}</${wrapperTag}>`;
+  }).join('');
+}
+
+function cloneLangValue(value) {
+  const normalised = normaliseLangValue(value);
+  const clone = createEmptyLangText();
+  LANGUAGES.forEach(({ code }) => {
+    clone[code] = normalised[code];
+  });
+  return clone;
+}
+
 const DEFAULT_THEME = {
   c1: '#0f766e',
   c2: '#0ea5a4',
@@ -555,29 +679,21 @@ function parseTemplate(html) {
   const currencyNote = headerEl?.querySelector('small.mono');
 
   const headerData = {
-    cardTitle: (() => {
-      if (!h1) return '';
-      const badge = h1.querySelector('.badge');
-      if (badge && h1.childNodes.length) {
-        const firstNode = Array.from(h1.childNodes).find((node) => node.nodeType === Node.TEXT_NODE);
-        return firstNode ? firstNode.textContent.trim() : h1.textContent.trim();
+    cardTitle: cloneLangValue(parseLangNode(h1)),
+    lead: (() => {
+      if (!leadNodes.length) {
+        return createEmptyLangText();
       }
-      return h1.textContent.trim();
+      return leadNodes.reduce((acc, node) => mergeLangNodes(acc, parseLangNode(node)), createEmptyLangText());
     })(),
-    lead: leadNodes.length
-      ? leadNodes
-          .map((node) => node.textContent.trim())
-          .filter(Boolean)
-          .join('\n')
-      : '',
-    currencyNote: currencyNote ? currencyNote.textContent.trim() : '',
+    currencyNote: cloneLangValue(parseLangNode(currencyNote)),
   };
 
   const navMap = new Map();
   const navLinks = root.querySelectorAll('nav.toc a[href^="#"]');
   navLinks.forEach((link) => {
     const id = link.getAttribute('href').slice(1);
-    navMap.set(id, link.textContent.trim());
+    navMap.set(id, cloneLangValue(parseLangNode(link)));
   });
 
   const sections = [];
@@ -586,9 +702,9 @@ function parseTemplate(html) {
     const heading = sectionEl.querySelector('h1, h2, h3, h4');
     const headingTag = heading ? heading.tagName.toLowerCase() : 'h2';
     const headingId = heading?.id || '';
-    const title = heading ? heading.textContent.trim() : '';
+    const title = cloneLangValue(parseLangNode(heading));
     const noteEl = sectionEl.querySelector(':scope > p.note');
-    const note = noteEl ? noteEl.textContent.trim() : '';
+    const note = cloneLangValue(parseLangNode(noteEl));
 
     let layout = 'single';
     let itemContainer = null;
@@ -621,8 +737,8 @@ function parseTemplate(html) {
       }
 
       return {
-        title: titleEl ? titleEl.textContent.trim() : '',
-        subtitle: subtitleEl ? subtitleEl.textContent.trim() : '',
+        title: cloneLangValue(parseLangNode(titleEl)),
+        description: cloneLangValue(parseLangNode(subtitleEl)),
         duration: durationEl ? durationEl.textContent.trim() : '',
         price: priceEl ? priceEl.textContent.trim() : '',
         spanFull,
@@ -637,13 +753,13 @@ function parseTemplate(html) {
       title,
       note,
       layout,
-      navLabel: navMap.get(sectionId) || title,
+      navLabel: cloneLangValue(navMap.get(sectionId) || title),
       items,
       uid: createUid(),
     });
   });
 
-  const footerNote = root.querySelector('footer.panel p.note')?.textContent.trim() || '';
+  const footerNote = cloneLangValue(parseLangNode(root.querySelector('footer.panel p.note')));
 
   return {
     header: headerData,
@@ -654,27 +770,40 @@ function parseTemplate(html) {
 }
 
 function renderHeaderEditor() {
+  const buildField = (label, field, type = 'input', rows = 2) => {
+    const source = field === 'footerNote' ? state.footerNote : state.header[field];
+    const controls = LANGUAGES.map(({ code, label: langLabel, flag }) => {
+      const value = source?.[code] ?? '';
+      if (type === 'textarea') {
+        return `
+      <label class="lang-field">
+        <span class="lang-flag" aria-hidden="true">${flag}</span>
+        <span>${langLabel}</span>
+        <textarea rows="${rows}" data-header-field="${field}.${code}">${escapeHtml(value)}</textarea>
+      </label>`;
+      }
+      return `
+      <label class="lang-field">
+        <span class="lang-flag" aria-hidden="true">${flag}</span>
+        <span>${langLabel}</span>
+        <input type="text" data-header-field="${field}.${code}" value="${escapeAttribute(value)}" />
+      </label>`;
+    }).join('');
+
+    return `
+    <div class="multilang-field">
+      <span class="group-label">${label}</span>
+${controls}
+    </div>`;
+  };
+
   headerEditor.innerHTML = `
     <h3>En-tête de la carte</h3>
-    <label>
-      Titre principal
-      <input type="text" data-header-field="cardTitle" value="${escapeAttribute(state.header.cardTitle)}" />
-    </label>
-    <label>
-      Sous-titre / accroche (saisir un retour à la ligne pour une seconde phrase)
-      <textarea rows="2" data-header-field="lead">${escapeHtml(state.header.lead)}</textarea>
-    </label>
-    <label>
-      Note sur la devise
-      <input type="text" data-header-field="currencyNote" value="${escapeAttribute(state.header.currencyNote)}" />
-    </label>
-    <label>
-      Texte du pied de page
-      <textarea rows="2" data-footer-note></textarea>
-    </label>
+    ${buildField('Titre principal', 'cardTitle')}
+    ${buildField('Sous-titre / accroche (retours à la ligne possibles)', 'lead', 'textarea', 2)}
+    ${buildField('Note sur la devise', 'currencyNote')}
+    ${buildField('Texte du pied de page', 'footerNote', 'textarea', 2)}
   `;
-  const footerTextarea = headerEditor.querySelector('textarea[data-footer-note]');
-  footerTextarea.value = state.footerNote;
 }
 
 function renderThemeEditor() {
@@ -744,16 +873,28 @@ function renderSections(options = {}) {
       sectionNode.open = true;
     }
 
-    const label = section.title || `Section ${index + 1}`;
+    const titleValues = normaliseLangValue(section.title);
+    const label = titleValues.fr || titleValues.en || `Section ${index + 1}`;
     sectionNode.querySelector('.section-label').textContent = label;
 
     const sectionForm = sectionNode.querySelector('.section-form');
     const idInput = sectionForm.querySelector('input[data-field="id"]');
     idInput.value = section.id || '';
     idInput.setAttribute('aria-label', `Identifiant de la section ${label}`);
-    sectionForm.querySelector('input[data-field="title"]').value = section.title || '';
-    sectionForm.querySelector('input[data-field="navLabel"]').value = section.navLabel || '';
-    sectionForm.querySelector('textarea[data-field="note"]').value = section.note || '';
+    LANGUAGES.forEach(({ code }) => {
+      const titleInput = sectionForm.querySelector(`input[data-field="title.${code}"]`);
+      if (titleInput) {
+        titleInput.value = section.title?.[code] ?? '';
+      }
+      const navInput = sectionForm.querySelector(`input[data-field="navLabel.${code}"]`);
+      if (navInput) {
+        navInput.value = section.navLabel?.[code] ?? '';
+      }
+      const noteArea = sectionForm.querySelector(`textarea[data-field="note.${code}"]`);
+      if (noteArea) {
+        noteArea.value = section.note?.[code] ?? '';
+      }
+    });
     const layoutSelect = sectionForm.querySelector('select[data-field="layout"]');
     const layoutValue = ['grid-2', 'grid-1', 'single'].includes(section.layout) ? section.layout : 'grid-2';
     layoutSelect.value = layoutValue;
@@ -766,8 +907,16 @@ function renderSections(options = {}) {
     section.items.forEach((item, itemIndex) => {
       const itemNode = itemTemplate.content.firstElementChild.cloneNode(true);
       itemNode.dataset.index = itemIndex;
-      itemNode.querySelector('input[data-field="title"]').value = item.title || '';
-      itemNode.querySelector('input[data-field="subtitle"]').value = item.subtitle || '';
+      LANGUAGES.forEach(({ code }) => {
+        const titleInput = itemNode.querySelector(`input[data-field="title.${code}"]`);
+        if (titleInput) {
+          titleInput.value = item.title?.[code] ?? '';
+        }
+        const descInput = itemNode.querySelector(`textarea[data-field="description.${code}"]`);
+        if (descInput) {
+          descInput.value = item.description?.[code] ?? '';
+        }
+      });
       itemNode.querySelector('input[data-field="duration"]').value = item.duration || '';
       itemNode.querySelector('input[data-field="price"]').value = item.price || '';
       itemNode.querySelector('input[data-field="spanFull"]').checked = Boolean(item.spanFull);
@@ -785,14 +934,29 @@ function addSection() {
     id: `section-${index}`,
     headingTag: 'h2',
     headingId: `h-section-${index}`,
-    title: 'Nouvelle section',
-    navLabel: 'Nouvelle section',
-    note: '',
+    title: (() => {
+      const value = createEmptyLangText();
+      value.fr = 'Nouvelle section';
+      value.en = 'New section';
+      return value;
+    })(),
+    navLabel: (() => {
+      const value = createEmptyLangText();
+      value.fr = 'Nouvelle section';
+      value.en = 'New section';
+      return value;
+    })(),
+    note: createEmptyLangText(),
     layout: 'grid-2',
     items: [
       {
-        title: 'Nouvelle prestation',
-        subtitle: '',
+        title: (() => {
+          const value = createEmptyLangText();
+          value.fr = 'Nouvelle prestation';
+          value.en = 'New treatment';
+          return value;
+        })(),
+        description: createEmptyLangText(),
         duration: '',
         price: '',
         spanFull: false,
@@ -808,8 +972,13 @@ function addSection() {
 
 function addItem(sectionIndex) {
   state.sections[sectionIndex].items.push({
-    title: 'Nouvelle prestation',
-    subtitle: '',
+    title: (() => {
+      const value = createEmptyLangText();
+      value.fr = 'Nouvelle prestation';
+      value.en = 'New treatment';
+      return value;
+    })(),
+    description: createEmptyLangText(),
     duration: '',
     price: '',
     spanFull: false,
@@ -837,18 +1006,29 @@ function handleSectionInput(event) {
   const sectionNode = target.closest('.section-editor');
   const sectionIndex = Number(sectionNode?.dataset.index ?? -1);
   if (sectionIndex < 0) return;
-  const field = target.dataset.field;
+  const fieldPath = target.dataset.field;
+  if (!fieldPath) return;
+  const [field, lang] = fieldPath.split('.');
 
   if (target.closest('.item-editor')) {
     const itemNode = target.closest('.item-editor');
     const itemIndex = Number(itemNode.dataset.index);
+    const item = state.sections[sectionIndex].items[itemIndex];
     if (field === 'spanFull') {
       state.sections[sectionIndex].items[itemIndex][field] = target.checked;
+    } else if (lang) {
+      item[field] = cloneLangValue(item[field]);
+      item[field][lang] = target.value;
     } else {
       state.sections[sectionIndex].items[itemIndex][field] = target.value;
     }
   } else {
-    state.sections[sectionIndex][field] = target.value;
+    if (lang) {
+      state.sections[sectionIndex][field] = cloneLangValue(state.sections[sectionIndex][field]);
+      state.sections[sectionIndex][field][lang] = target.value;
+    } else {
+      state.sections[sectionIndex][field] = target.value;
+    }
     if (field === 'id') {
       const normalized = target.value.trim();
       state.sections[sectionIndex].headingId = normalized
@@ -856,7 +1036,8 @@ function handleSectionInput(event) {
         : '';
     }
     if (field === 'title') {
-      const label = target.value || `Section ${sectionIndex + 1}`;
+      const titleValues = normaliseLangValue(state.sections[sectionIndex].title);
+      const label = titleValues.fr || titleValues.en || `Section ${sectionIndex + 1}`;
       sectionNode.querySelector('.section-label').textContent = label;
       const idInput = sectionNode.querySelector('input[data-field="id"]');
       if (idInput) {
@@ -891,16 +1072,19 @@ function handleSectionClick(event) {
 
 function handleHeaderInput(event) {
   const target = event.target;
-  const field = target.dataset.headerField;
-  if (field) {
+  const fieldPath = target.dataset.headerField;
+  if (!fieldPath) return;
+  const [field, lang] = fieldPath.split('.');
+  if (field === 'footerNote' && lang) {
+    state.footerNote = cloneLangValue(state.footerNote);
+    state.footerNote[lang] = target.value;
+  } else if (lang) {
+    state.header[field] = cloneLangValue(state.header[field]);
+    state.header[field][lang] = target.value;
+  } else {
     state.header[field] = target.value;
-    updatePreview();
-    return;
   }
-  if (target.dataset.footerNote !== undefined) {
-    state.footerNote = target.value;
-    updatePreview();
-  }
+  updatePreview();
 }
 
 function handleThemeInput(event) {
@@ -990,26 +1174,29 @@ ${cssVarLines.join('\n')}
          background:var(--bg);`;
 
   const navLinks = state.sections
-    .map((section) => `      <a href="#${escapeHtml(section.id)}">${escapeHtml(section.navLabel || section.title)}</a>`)
+    .map((section) => {
+      const navSource = hasLangValue(section.navLabel) ? section.navLabel : section.title;
+      return `      <a href="#${escapeHtml(section.id)}">${renderLangInline(navSource)}</a>`;
+    })
     .join('\n');
 
   const sectionsHtml = state.sections
     .map((section) => generateSectionHtml(section))
     .join('\n\n');
 
-  const leadLines = (state.header.lead || '')
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-  const leadHtml = leadLines.length
-    ? `        <p class="lead">${leadLines.map((line) => escapeHtml(line)).join('<br />')}</p>\n`
+  const leadHtml = hasLangValue(state.header.lead)
+    ? `          <p class="lead">${renderLangInline(state.header.lead, { multiline: true })}</p>\n`
     : '';
-  const currencyNoteHtml = state.header.currencyNote
-    ? `      <div>\n        <small class="mono">${escapeHtml(state.header.currencyNote)}</small>\n      </div>\n`
+  const currencyNoteHtml = hasLangValue(state.header.currencyNote)
+    ? `      <div>\n        <small class="mono">${renderLangInline(state.header.currencyNote)}</small>\n      </div>\n`
+    : '';
+  const footerNoteContent = hasLangValue(state.footerNote)
+    ? `      <p class="note">${renderLangInline(state.footerNote, { multiline: true })}</p>\n`
     : '';
 
   return `<!-- ====== CARTE DES SOINS 2025 — RVB SPA (HTML template avec placeholders) ====== -->
-<section id="rvb-spa-carte-2025" lang="fr" style="${escapeAttribute(rootStyle)}">
+<section id="rvb-spa-carte-2025" lang="fr" data-lang="fr"
+  style="${rootStyle}">
 
   <!-- Import de la police Montserrat -->
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -1104,17 +1291,6 @@ ${cssVarLines.join('\n')}
       font-weight: 400;
     }
 
-    #rvb-spa-carte-2025 .badge {
-      display: inline-block;
-      padding: .2rem .5rem;
-      border-radius: 8px;
-      background: linear-gradient(90deg, var(--c1), var(--c2));
-      color: #fff;
-      font-size: .78rem;
-      font-weight: 500;
-      letter-spacing: 0.03em;
-    }
-
     #rvb-spa-carte-2025 .toc a {
       display: inline-block;
       margin: .2rem .4rem .2rem 0;
@@ -1142,6 +1318,47 @@ ${cssVarLines.join('\n')}
       color: var(--muted);
       font-weight: 400;
     }
+
+    #rvb-spa-carte-2025[data-lang="fr"] .lang-en {
+      display: none;
+    }
+
+    #rvb-spa-carte-2025[data-lang="en"] .lang-fr {
+      display: none;
+    }
+
+    #rvb-spa-carte-2025 .lang-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin: 16px 0 10px;
+    }
+
+    #rvb-spa-carte-2025 .lang-switch button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid var(--ring);
+      background: var(--item, #fff);
+      color: inherit;
+      cursor: pointer;
+      font-size: 0.92rem;
+      font-weight: 600;
+      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+
+    #rvb-spa-carte-2025 .lang-switch button[aria-pressed="true"] {
+      background: linear-gradient(120deg, var(--c1), var(--c2));
+      border-color: transparent;
+      color: #fff;
+    }
+
+    #rvb-spa-carte-2025 .lang-switch button .flag {
+      font-size: 1.1rem;
+      line-height: 1;
+    }
   </style>
 
 
@@ -1149,10 +1366,15 @@ ${cssVarLines.join('\n')}
     <header class="panel" style="display:flex;gap:14px;align-items:center;justify-content:space-between;">
       <div style="display:flex;gap:12px;align-items:center;">
         <div>
-          <h1>${escapeHtml(state.header.cardTitle)}</h1>
+          <h1>${renderLangInline(state.header.cardTitle)}</h1>
 ${leadHtml}        </div>
       </div>
 ${currencyNoteHtml}    </header>
+
+    <div class="lang-switch" role="group" aria-label="Choisir la langue">
+      <button type="button" data-lang-select="fr" aria-pressed="true"><span class="flag" aria-hidden="true">🇫🇷</span><span>Français</span></button>
+      <button type="button" data-lang-select="en" aria-pressed="false"><span class="flag" aria-hidden="true">🇬🇧</span><span>English</span></button>
+    </div>
 
     <!-- Table des matières -->
     <nav class="toc" aria-label="Sommaire" style="margin:14px 0 6px">
@@ -1162,8 +1384,7 @@ ${navLinks}
 ${sectionsHtml}
 
     <footer class="panel" style="margin-top:14px">
-      <p class="note">${escapeHtml(state.footerNote)}</p>
-    </footer>
+${footerNoteContent}    </footer>
 
     <!-- Données pour le préremplissage CF7 -->
     <div id="carecard-data"
@@ -1178,9 +1399,28 @@ ${sectionsHtml}
       {{cf7}}
     </div>
   </div>
+  <script>
+    (function () {
+      const root = document.getElementById('rvb-spa-carte-2025');
+      if (!root) return;
+      const buttons = root.querySelectorAll('[data-lang-select]');
+      const setLang = (lang) => {
+        root.setAttribute('data-lang', lang);
+        buttons.forEach((button) => {
+          button.setAttribute('aria-pressed', button.dataset.langSelect === lang ? 'true' : 'false');
+        });
+      };
+      buttons.forEach((button) => {
+        button.addEventListener('click', () => setLang(button.dataset.langSelect));
+      });
+      const initial = root.getAttribute('data-lang') || 'fr';
+      setLang(initial);
+    })();
+  </script>
 </section>
 <!-- ====== /CARTE DES SOINS 2025 ====== -->`;
 }
+
 
 function generateSectionHtml(section) {
   const headingIdAttr = section.headingId ? ` id="${escapeHtml(section.headingId)}"` : '';
@@ -1201,18 +1441,19 @@ function generateSectionHtml(section) {
 
   const lines = [
     `    <section id="${escapeHtml(section.id)}" class="panel"${ariaLabelledBy}>`,
-    `      <${headingTag}${headingIdAttr}>${escapeHtml(section.title)}</${headingTag}>`,
+    `      <${headingTag}${headingIdAttr}>${renderLangInline(section.title)}</${headingTag}>`,
     contentBlock,
   ];
 
-  if (section.note) {
-    lines.push(`      <p class="note">${escapeHtml(section.note)}</p>`);
+  if (hasLangValue(section.note)) {
+    lines.push(`      <p class="note">${renderLangInline(section.note, { multiline: true })}</p>`);
   }
 
   lines.push('    </section>');
 
   return lines.filter(Boolean).join('\n');
 }
+
 
 function generateItemHtml(item, layout) {
   const styleAttr = item.spanFull && layout !== 'single' ? ' style="grid-column:1/-1"' : '';
@@ -1229,11 +1470,11 @@ function generateItemHtml(item, layout) {
     `        <div class="item"${styleAttr}>`,
     '          <div class="row">',
     '            <div>',
-    `              <div class="title">${escapeHtml(item.title)}</div>`,
+    `              <div class="title">${renderLangInline(item.title, { strong: true })}</div>`,
   ];
 
-  if (item.subtitle) {
-    lines.push(`              <div class="subtitle">${escapeHtml(item.subtitle)}</div>`);
+  if (hasLangValue(item.description)) {
+    lines.push(`              <div class="subtitle">${renderLangInline(item.description, { multiline: true })}</div>`);
   }
 
   lines.push('            </div>');
@@ -1251,6 +1492,7 @@ function generateItemHtml(item, layout) {
 
   return lines.join('\n');
 }
+
 
 function updatePreview() {
   const html = generateHTML(state);

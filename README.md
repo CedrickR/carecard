@@ -2,6 +2,13 @@
 
 Application web pour éditer et prévisualiser la carte des soins RVB Spa.
 
+## Fonctionnalités principales
+
+- Édition bilingue (français / anglais) de chaque champ avec prévisualisation directe et bascule par drapeaux.
+- Gestion des sections et des lignes (ajout, duplication manuelle, suppression) avec mise à jour automatique de l'ancre et du sommaire.
+- Personnalisation fine de la palette via des variables CSS exportées dans le fichier généré.
+- Import / export du fichier HTML final pour intégration côté site ou plugin WordPress.
+
 ## Démarrage rapide avec Docker
 
 1. Construire et lancer le conteneur :

@@ -182,7 +182,8 @@ body {
 
 #header-editor label,
 #theme-editor label,
-.section-form label {
+.section-form label:not(.lang-field),
+.item-editor label:not(.lang-field) {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -194,12 +195,64 @@ body {
 #header-editor textarea,
 .section-form input,
 .section-form textarea,
-.section-form select {
+.section-form select,
+.item-editor input,
+.item-editor textarea,
+.item-editor select {
   font: inherit;
   padding: 0.5rem 0.65rem;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: white;
+}
+
+.multilang-field {
+  display: grid;
+  gap: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+
+.multilang-field .group-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.lang-field {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.4rem 0.6rem;
+  align-items: center;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(15, 118, 110, 0.05);
+}
+
+.lang-field .lang-flag {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.lang-field > span:nth-of-type(2) {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.lang-field input,
+.lang-field textarea {
+  grid-column: 1 / -1;
+  width: 100%;
+  font: inherit;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+
+.lang-field textarea {
+  min-height: 68px;
+  resize: vertical;
 }
 
 #header-editor textarea,

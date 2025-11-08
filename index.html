@@ -63,19 +63,46 @@
               Identifiant (ancre)
               <input type="text" data-field="id" />
             </label>
-            <label>
-              Titre de la section
-              <input type="text" data-field="title" />
+          </div>
+          <div class="multilang-field">
+            <span class="group-label">Titre de la section</span>
+            <label class="lang-field">
+              <span class="lang-flag" aria-hidden="true">🇫🇷</span>
+              <span>Français</span>
+              <input type="text" data-field="title.fr" />
+            </label>
+            <label class="lang-field">
+              <span class="lang-flag" aria-hidden="true">🇬🇧</span>
+              <span>English</span>
+              <input type="text" data-field="title.en" />
             </label>
           </div>
-          <label>
-            Libellé dans le sommaire
-            <input type="text" data-field="navLabel" />
-          </label>
-          <label>
-            Note (facultatif)
-            <textarea rows="2" data-field="note"></textarea>
-          </label>
+          <div class="multilang-field">
+            <span class="group-label">Libellé dans le sommaire</span>
+            <label class="lang-field">
+              <span class="lang-flag" aria-hidden="true">🇫🇷</span>
+              <span>Français</span>
+              <input type="text" data-field="navLabel.fr" />
+            </label>
+            <label class="lang-field">
+              <span class="lang-flag" aria-hidden="true">🇬🇧</span>
+              <span>English</span>
+              <input type="text" data-field="navLabel.en" />
+            </label>
+          </div>
+          <div class="multilang-field">
+            <span class="group-label">Note (facultatif)</span>
+            <label class="lang-field">
+              <span class="lang-flag" aria-hidden="true">🇫🇷</span>
+              <span>Français</span>
+              <textarea rows="2" data-field="note.fr"></textarea>
+            </label>
+            <label class="lang-field">
+              <span class="lang-flag" aria-hidden="true">🇬🇧</span>
+              <span>English</span>
+              <textarea rows="2" data-field="note.en"></textarea>
+            </label>
+          </div>
           <label>
             Type de disposition
             <select data-field="layout">
@@ -93,14 +120,30 @@
     <template id="item-template">
       <fieldset class="item-editor">
         <legend>Ligne</legend>
-        <div class="field-group">
-          <label>
-            Titre
-            <input type="text" data-field="title" />
+        <div class="multilang-field">
+          <span class="group-label">Titre</span>
+          <label class="lang-field">
+            <span class="lang-flag" aria-hidden="true">🇫🇷</span>
+            <span>Français</span>
+            <input type="text" data-field="title.fr" />
           </label>
-          <label>
-            Sous-titre / description
-            <input type="text" data-field="subtitle" />
+          <label class="lang-field">
+            <span class="lang-flag" aria-hidden="true">🇬🇧</span>
+            <span>English</span>
+            <input type="text" data-field="title.en" />
+          </label>
+        </div>
+        <div class="multilang-field">
+          <span class="group-label">Description</span>
+          <label class="lang-field">
+            <span class="lang-flag" aria-hidden="true">🇫🇷</span>
+            <span>Français</span>
+            <textarea rows="2" data-field="description.fr"></textarea>
+          </label>
+          <label class="lang-field">
+            <span class="lang-flag" aria-hidden="true">🇬🇧</span>
+            <span>English</span>
+            <textarea rows="2" data-field="description.en"></textarea>
           </label>
         </div>
         <div class="field-group">
