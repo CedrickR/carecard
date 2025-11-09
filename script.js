@@ -93,6 +93,25 @@ const defaultTemplate = `<!-- ====== CARTE DES SOINS 2025 — RVB SPA (HTML temp
       font-weight: 400;
     }
 
+    #rvb-spa-carte-2025 .subtitle .lang {
+      display: block;
+    }
+
+    #rvb-spa-carte-2025 .subtitle .lang + .lang {
+      margin-top: .35rem;
+    }
+
+    #rvb-spa-carte-2025 .subtitle ul,
+    #rvb-spa-carte-2025 .subtitle ol {
+      margin: .4rem 0 0;
+      padding-left: 1.1rem;
+    }
+
+    #rvb-spa-carte-2025 .subtitle li {
+      margin: .2rem 0;
+      line-height: 1.45;
+    }
+
     #rvb-spa-carte-2025 .meta {
       white-space: nowrap;
       text-align: right;
@@ -524,8 +543,86 @@ function mergeLangNodes(accumulator, addition) {
   return result;
 }
 
-function formatLangValue(value, multiline = false) {
-  const safe = escapeHtml(value ?? '');
+const ALLOWED_RICH_TEXT_TAGS = new Set(['BR', 'UL', 'OL', 'LI', 'STRONG', 'EM', 'P']);
+
+function sanitizeRichText(html) {
+  if (!html) {
+    return '';
+  }
+  const template = document.createElement('template');
+  template.innerHTML = html;
+
+  const convertTag = (element, newTag) => {
+    const replacement = document.createElement(newTag);
+    while (element.firstChild) {
+      replacement.appendChild(element.firstChild);
+    }
+    element.replaceWith(replacement);
+    return replacement;
+  };
+
+  const unwrapNode = (element) => {
+    const parent = element.parentNode;
+    if (!parent) return;
+    while (element.firstChild) {
+      parent.insertBefore(element.firstChild, element);
+    }
+    element.remove();
+  };
+
+  const walk = (node) => {
+    Array.from(node.childNodes).forEach((child) => {
+      if (child.nodeType === Node.ELEMENT_NODE) {
+        const tag = child.tagName;
+        if (tag === 'B') {
+          child = convertTag(child, 'strong');
+        } else if (tag === 'I') {
+          child = convertTag(child, 'em');
+        } else if (tag === 'DIV') {
+          child = convertTag(child, 'p');
+        }
+
+        if (child.tagName === 'SPAN') {
+          unwrapNode(child);
+          return;
+        }
+
+        if (!ALLOWED_RICH_TEXT_TAGS.has(child.tagName)) {
+          unwrapNode(child);
+          return;
+        }
+
+        Array.from(child.attributes).forEach((attr) => {
+          child.removeAttribute(attr.name);
+        });
+        walk(child);
+        if ((child.tagName === 'P' || child.tagName === 'LI') && child.textContent.replace(/\u00a0/g, ' ').trim() === '') {
+          child.remove();
+        }
+      } else if (child.nodeType === Node.COMMENT_NODE) {
+        child.remove();
+      }
+    });
+  };
+
+  walk(template.content);
+
+  const cleaned = template.innerHTML
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s+<\/([a-z]+)>/gi, '</$1>')
+    .replace(/<(strong|em|li|p)>\s+/gi, '<$1>')
+    .trim();
+
+  return cleaned;
+}
+
+function formatLangValue(value, options = {}) {
+  const { multiline = false, richText = false } = options;
+  const raw = value ?? '';
+  if (richText) {
+    return raw;
+  }
+  const safe = escapeHtml(raw);
   if (!multiline) {
     return safe;
   }
@@ -533,17 +630,44 @@ function formatLangValue(value, multiline = false) {
 }
 
 function renderLangInline(value, options = {}) {
-  const { strong = false, multiline = false, wrapperTag = 'span', className = '' } = options;
+  const { strong = false, multiline = false, wrapperTag = 'span', className = '', richText = false } = options;
   const normalised = normaliseLangValue(value);
   return LANGUAGES.map(({ code }) => {
     const classes = ['lang', `lang-${code}`];
     if (className) {
       classes.push(className);
     }
-    const content = formatLangValue(normalised[code], multiline);
+    const content = formatLangValue(normalised[code], { multiline, richText });
     const inner = strong ? `<strong>${content}</strong>` : content;
     return `<${wrapperTag} class="${classes.join(' ')}">${inner}</${wrapperTag}>`;
   }).join('');
+}
+
+function parseLangNodeRich(node) {
+  const fallback = createEmptyLangText();
+  if (!node) {
+    return fallback;
+  }
+  let found = false;
+  const result = createEmptyLangText();
+  LANGUAGES.forEach(({ code }) => {
+    const span = node.querySelector(`:scope > .lang.lang-${code}`);
+    if (span) {
+      result[code] = sanitizeRichText(span.innerHTML.trim());
+      found = true;
+    }
+  });
+  if (found) {
+    return result;
+  }
+  const htmlContent = sanitizeRichText(node.innerHTML.trim());
+  if (!htmlContent) {
+    return fallback;
+  }
+  if (!/[<>]/.test(htmlContent)) {
+    return normaliseLangValue(splitBilingualText(node.textContent.trim()));
+  }
+  return normaliseLangValue(htmlContent);
 }
 
 function cloneLangValue(value) {
@@ -738,7 +862,7 @@ function parseTemplate(html) {
 
       return {
         title: cloneLangValue(parseLangNode(titleEl)),
-        description: cloneLangValue(parseLangNode(subtitleEl)),
+        description: cloneLangValue(parseLangNodeRich(subtitleEl)),
         duration: durationEl ? durationEl.textContent.trim() : '',
         price: priceEl ? priceEl.textContent.trim() : '',
         spanFull,
@@ -912,9 +1036,10 @@ function renderSections(options = {}) {
         if (titleInput) {
           titleInput.value = item.title?.[code] ?? '';
         }
-        const descInput = itemNode.querySelector(`textarea[data-field="description.${code}"]`);
-        if (descInput) {
-          descInput.value = item.description?.[code] ?? '';
+        const descEditor = itemNode.querySelector(`.rich-text-editor[data-field="description.${code}"]`);
+        if (descEditor) {
+          const value = item.description?.[code] ?? '';
+          descEditor.innerHTML = value;
         }
       });
       itemNode.querySelector('input[data-field="duration"]').value = item.duration || '';
@@ -1030,6 +1155,9 @@ function handleSectionInput(event) {
   const fieldPath = target.dataset.field;
   if (!fieldPath) return;
   const [field, lang] = fieldPath.split('.');
+  const isRichText = target.dataset.richText === 'true';
+  const rawValue = target.isContentEditable ? target.innerHTML : target.value;
+  const nextValue = isRichText ? sanitizeRichText(rawValue) : rawValue;
 
   if (target.closest('.item-editor')) {
     const itemNode = target.closest('.item-editor');
@@ -1039,19 +1167,19 @@ function handleSectionInput(event) {
       state.sections[sectionIndex].items[itemIndex][field] = target.checked;
     } else if (lang) {
       item[field] = cloneLangValue(item[field]);
-      item[field][lang] = target.value;
+      item[field][lang] = nextValue;
     } else {
-      state.sections[sectionIndex].items[itemIndex][field] = target.value;
+      state.sections[sectionIndex].items[itemIndex][field] = nextValue;
     }
   } else {
     if (lang) {
       state.sections[sectionIndex][field] = cloneLangValue(state.sections[sectionIndex][field]);
-      state.sections[sectionIndex][field][lang] = target.value;
+      state.sections[sectionIndex][field][lang] = nextValue;
     } else {
-      state.sections[sectionIndex][field] = target.value;
+      state.sections[sectionIndex][field] = nextValue;
     }
     if (field === 'id') {
-      const normalized = target.value.trim();
+      const normalized = nextValue.trim();
       state.sections[sectionIndex].headingId = normalized
         ? `h-${normalized.replace(/[^a-z0-9\-]/gi, '-').toLowerCase()}`
         : '';
@@ -1073,6 +1201,19 @@ function handleSectionInput(event) {
 function handleSectionClick(event) {
   const button = event.target.closest('button');
   if (!button || !sectionsEditor.contains(button)) {
+    return;
+  }
+
+  const command = button.dataset.richCommand;
+  if (command) {
+    event.preventDefault();
+    const richField = button.closest('.rich-text-field');
+    const editor = richField?.querySelector('.rich-text-editor');
+    if (editor) {
+      editor.focus();
+      document.execCommand(command, false, null);
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
+    }
     return;
   }
 
@@ -1520,7 +1661,7 @@ function generateItemHtml(item, layout) {
   ];
 
   if (hasLangValue(item.description)) {
-    lines.push(`              <div class="subtitle">${renderLangInline(item.description, { multiline: true })}</div>`);
+    lines.push(`              <div class="subtitle">${renderLangInline(item.description, { multiline: true, richText: true, wrapperTag: 'div' })}</div>`);
   }
 
   lines.push('            </div>');
