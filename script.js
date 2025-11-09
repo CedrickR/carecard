@@ -93,6 +93,25 @@ const defaultTemplate = `<!-- ====== CARTE DES SOINS 2025 — RVB SPA (HTML temp
       font-weight: 400;
     }
 
+    #rvb-spa-carte-2025 .subtitle .lang {
+      display: block;
+    }
+
+    #rvb-spa-carte-2025 .subtitle .lang + .lang {
+      margin-top: .35rem;
+    }
+
+    #rvb-spa-carte-2025 .subtitle ul,
+    #rvb-spa-carte-2025 .subtitle ol {
+      margin: .4rem 0 0;
+      padding-left: 1.1rem;
+    }
+
+    #rvb-spa-carte-2025 .subtitle li {
+      margin: .2rem 0;
+      line-height: 1.45;
+    }
+
     #rvb-spa-carte-2025 .meta {
       white-space: nowrap;
       text-align: right;
@@ -524,8 +543,86 @@ function mergeLangNodes(accumulator, addition) {
   return result;
 }
 
-function formatLangValue(value, multiline = false) {
-  const safe = escapeHtml(value ?? '');
+const ALLOWED_RICH_TEXT_TAGS = new Set(['BR', 'UL', 'OL', 'LI', 'STRONG', 'EM', 'P']);
+
+function sanitizeRichText(html) {
+  if (!html) {
+    return '';
+  }
+  const template = document.createElement('template');
+  template.innerHTML = html;
+
+  const convertTag = (element, newTag) => {
+    const replacement = document.createElement(newTag);
+    while (element.firstChild) {
+      replacement.appendChild(element.firstChild);
+    }
+    element.replaceWith(replacement);
+    return replacement;
+  };
+
+  const unwrapNode = (element) => {
+    const parent = element.parentNode;
+    if (!parent) return;
+    while (element.firstChild) {
+      parent.insertBefore(element.firstChild, element);
+    }
+    element.remove();
+  };
+
+  const walk = (node) => {
+    Array.from(node.childNodes).forEach((child) => {
+      if (child.nodeType === Node.ELEMENT_NODE) {
+        const tag = child.tagName;
+        if (tag === 'B') {
+          child = convertTag(child, 'strong');
+        } else if (tag === 'I') {
+          child = convertTag(child, 'em');
+        } else if (tag === 'DIV') {
+          child = convertTag(child, 'p');
+        }
+
+        if (child.tagName === 'SPAN') {
+          unwrapNode(child);
+          return;
+        }
+
+        if (!ALLOWED_RICH_TEXT_TAGS.has(child.tagName)) {
+          unwrapNode(child);
+          return;
+        }
+
+        Array.from(child.attributes).forEach((attr) => {
+          child.removeAttribute(attr.name);
+        });
+        walk(child);
+        if ((child.tagName === 'P' || child.tagName === 'LI') && child.textContent.replace(/\u00a0/g, ' ').trim() === '') {
+          child.remove();
+        }
+      } else if (child.nodeType === Node.COMMENT_NODE) {
+        child.remove();
+      }
+    });
+  };
+
+  walk(template.content);
+
+  const cleaned = template.innerHTML
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s+<\/([a-z]+)>/gi, '</$1>')
+    .replace(/<(strong|em|li|p)>\s+/gi, '<$1>')
+    .trim();
+
+  return cleaned;
+}
+
+function formatLangValue(value, options = {}) {
+  const { multiline = false, richText = false } = options;
+  const raw = value ?? '';
+  if (richText) {
+    return raw;
+  }
+  const safe = escapeHtml(raw);
   if (!multiline) {
     return safe;
   }
@@ -533,17 +630,44 @@ function formatLangValue(value, multiline = false) {
 }
 
 function renderLangInline(value, options = {}) {
-  const { strong = false, multiline = false, wrapperTag = 'span', className = '' } = options;
+  const { strong = false, multiline = false, wrapperTag = 'span', className = '', richText = false } = options;
   const normalised = normaliseLangValue(value);
   return LANGUAGES.map(({ code }) => {
     const classes = ['lang', `lang-${code}`];
     if (className) {
       classes.push(className);
     }
-    const content = formatLangValue(normalised[code], multiline);
+    const content = formatLangValue(normalised[code], { multiline, richText });
     const inner = strong ? `<strong>${content}</strong>` : content;
     return `<${wrapperTag} class="${classes.join(' ')}">${inner}</${wrapperTag}>`;
   }).join('');
+}
+
+function parseLangNodeRich(node) {
+  const fallback = createEmptyLangText();
+  if (!node) {
+    return fallback;
+  }
+  let found = false;
+  const result = createEmptyLangText();
+  LANGUAGES.forEach(({ code }) => {
+    const span = node.querySelector(`:scope > .lang.lang-${code}`);
+    if (span) {
+      result[code] = sanitizeRichText(span.innerHTML.trim());
+      found = true;
+    }
+  });
+  if (found) {
+    return result;
+  }
+  const htmlContent = sanitizeRichText(node.innerHTML.trim());
+  if (!htmlContent) {
+    return fallback;
+  }
+  if (!/[<>]/.test(htmlContent)) {
+    return normaliseLangValue(splitBilingualText(node.textContent.trim()));
+  }
+  return normaliseLangValue(htmlContent);
 }
 
 function cloneLangValue(value) {
@@ -617,12 +741,59 @@ const headerEditor = document.getElementById('header-editor');
 const themeEditor = document.getElementById('theme-editor');
 const sectionsEditor = document.getElementById('sections-editor');
 const addSectionBtn = document.getElementById('add-section');
+const saveBtn = document.getElementById('save-btn');
 const downloadBtn = document.getElementById('download-btn');
 const resetBtn = document.getElementById('reset-btn');
 const fileInput = document.getElementById('file-input');
 const previewFrame = document.getElementById('preview-frame');
 const sectionTemplate = document.getElementById('section-template');
 const itemTemplate = document.getElementById('item-template');
+
+const STORAGE_KEY = 'carecard-editor-state';
+const storageAvailable = isStorageAvailable();
+
+function isStorageAvailable() {
+  if (typeof window === 'undefined' || !('localStorage' in window)) {
+    return false;
+  }
+  try {
+    const testKey = '__carecard_storage_test__';
+    window.localStorage.setItem(testKey, testKey);
+    window.localStorage.removeItem(testKey);
+    return true;
+  } catch (error) {
+    console.warn('Le stockage local est indisponible :', error);
+    return false;
+  }
+}
+
+function getSavedSnapshot() {
+  if (!storageAvailable) {
+    return null;
+  }
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+    return JSON.parse(raw);
+  } catch (error) {
+    console.warn('Impossible de lire la sauvegarde locale :', error);
+    clearSavedWork();
+    return null;
+  }
+}
+
+function clearSavedWork() {
+  if (!storageAvailable) {
+    return;
+  }
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    console.warn('Impossible de supprimer la sauvegarde locale :', error);
+  }
+}
 
 function createUid() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -631,9 +802,84 @@ function createUid() {
   return `section-${Math.random().toString(36).slice(2, 10)}-${Date.now()}`;
 }
 
+function hydrateRestoredState(raw) {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const headerSource = raw.header || {};
+  const sectionsSource = Array.isArray(raw.sections) ? raw.sections : [];
+  const footerSource = raw.footerNote;
+  const themeSource = raw.theme || {};
+
+  const hydrated = {
+    header: {
+      cardTitle: cloneLangValue(headerSource.cardTitle ?? createEmptyLangText()),
+      lead: cloneLangValue(headerSource.lead ?? createEmptyLangText()),
+      currencyNote: cloneLangValue(headerSource.currencyNote ?? createEmptyLangText()),
+    },
+    sections: sectionsSource.map((section, index) => {
+      const safeSection = section && typeof section === 'object' ? section : {};
+      const items = Array.isArray(safeSection.items) ? safeSection.items : [];
+      return {
+        id: safeSection.id ?? `section-${index + 1}`,
+        headingTag: safeSection.headingTag || 'h2',
+        headingId: safeSection.headingId || '',
+        title: cloneLangValue(safeSection.title ?? createEmptyLangText()),
+        note: cloneLangValue(safeSection.note ?? createEmptyLangText()),
+        layout: ['grid-2', 'grid-1', 'single'].includes(safeSection.layout) ? safeSection.layout : 'grid-2',
+        navLabel: cloneLangValue(safeSection.navLabel ?? safeSection.title ?? createEmptyLangText()),
+        items: items.map((item) => {
+          const safeItem = item && typeof item === 'object' ? item : {};
+          const description = cloneLangValue(safeItem.description ?? createEmptyLangText());
+          LANGUAGES.forEach(({ code }) => {
+            description[code] = sanitizeRichText(description[code]);
+          });
+          return {
+            title: cloneLangValue(safeItem.title ?? createEmptyLangText()),
+            description,
+            duration: safeItem.duration ? String(safeItem.duration) : '',
+            price: safeItem.price ? String(safeItem.price) : '',
+            spanFull: Boolean(safeItem.spanFull),
+            metaOrder: safeItem.metaOrder === 'price-first' ? 'price-first' : 'duration-first',
+          };
+        }),
+        uid: safeSection.uid || createUid(),
+      };
+    }),
+    footerNote: cloneLangValue(footerSource ?? createEmptyLangText()),
+    theme: { ...DEFAULT_THEME },
+  };
+
+  Object.entries(themeSource).forEach(([key, value]) => {
+    if (THEME_KEY_SET.has(key)) {
+      hydrated.theme[key] = String(value);
+    }
+  });
+
+  return hydrated;
+}
+
 function initialise() {
   try {
-    state = parseTemplate(defaultTemplate);
+    let initialState = null;
+    const snapshot = getSavedSnapshot();
+    if (snapshot) {
+      const shouldRestore = confirm('Une sauvegarde locale a été trouvée. Souhaitez-vous la restaurer ?');
+      if (shouldRestore) {
+        initialState = hydrateRestoredState(snapshot);
+        if (!initialState) {
+          console.warn('La sauvegarde locale est invalide et sera ignorée.');
+          clearSavedWork();
+        }
+      } else {
+        clearSavedWork();
+      }
+    }
+    if (!initialState) {
+      initialState = parseTemplate(defaultTemplate);
+    }
+    state = initialState;
     renderHeaderEditor();
     renderThemeEditor();
     renderSections();
@@ -738,7 +984,7 @@ function parseTemplate(html) {
 
       return {
         title: cloneLangValue(parseLangNode(titleEl)),
-        description: cloneLangValue(parseLangNode(subtitleEl)),
+        description: cloneLangValue(parseLangNodeRich(subtitleEl)),
         duration: durationEl ? durationEl.textContent.trim() : '',
         price: priceEl ? priceEl.textContent.trim() : '',
         spanFull,
@@ -912,17 +1158,35 @@ function renderSections(options = {}) {
         if (titleInput) {
           titleInput.value = item.title?.[code] ?? '';
         }
-        const descInput = itemNode.querySelector(`textarea[data-field="description.${code}"]`);
-        if (descInput) {
-          descInput.value = item.description?.[code] ?? '';
+        const descEditor = itemNode.querySelector(`.rich-text-editor[data-field="description.${code}"]`);
+        if (descEditor) {
+          const value = item.description?.[code] ?? '';
+          descEditor.innerHTML = value;
         }
       });
       itemNode.querySelector('input[data-field="duration"]').value = item.duration || '';
       itemNode.querySelector('input[data-field="price"]').value = item.price || '';
       itemNode.querySelector('input[data-field="spanFull"]').checked = Boolean(item.spanFull);
       itemNode.querySelector('select[data-field="metaOrder"]').value = item.metaOrder || 'duration-first';
+      const moveUpBtn = itemNode.querySelector('.move-item-up');
+      if (moveUpBtn) {
+        moveUpBtn.disabled = itemIndex === 0;
+      }
+      const moveDownBtn = itemNode.querySelector('.move-item-down');
+      if (moveDownBtn) {
+        moveDownBtn.disabled = itemIndex === section.items.length - 1;
+      }
       itemsContainer.appendChild(itemNode);
     });
+
+    const moveUpBtn = sectionNode.querySelector('.move-section-up');
+    if (moveUpBtn) {
+      moveUpBtn.disabled = index === 0;
+    }
+    const moveDownBtn = sectionNode.querySelector('.move-section-down');
+    if (moveDownBtn) {
+      moveDownBtn.disabled = index === state.sections.length - 1;
+    }
 
     sectionsEditor.appendChild(sectionNode);
   });
@@ -1000,6 +1264,32 @@ function deleteItem(sectionIndex, itemIndex) {
   updatePreview();
 }
 
+function moveItem(sectionIndex, itemIndex, direction) {
+  const section = state.sections[sectionIndex];
+  if (!section) return;
+  const targetIndex = itemIndex + direction;
+  if (targetIndex < 0 || targetIndex >= section.items.length) {
+    return;
+  }
+  const [item] = section.items.splice(itemIndex, 1);
+  section.items.splice(targetIndex, 0, item);
+  const forceOpenUid = section?.uid ?? null;
+  renderSections({ forceOpenUid });
+  updatePreview();
+}
+
+function moveSection(sectionIndex, direction) {
+  const targetIndex = sectionIndex + direction;
+  if (targetIndex < 0 || targetIndex >= state.sections.length) {
+    return;
+  }
+  const [section] = state.sections.splice(sectionIndex, 1);
+  state.sections.splice(targetIndex, 0, section);
+  const forceOpenUid = section?.uid ?? null;
+  renderSections({ forceOpenUid });
+  updatePreview();
+}
+
 function handleSectionInput(event) {
   const target = event.target;
   if (!target.dataset.field) return;
@@ -1009,6 +1299,9 @@ function handleSectionInput(event) {
   const fieldPath = target.dataset.field;
   if (!fieldPath) return;
   const [field, lang] = fieldPath.split('.');
+  const isRichText = target.dataset.richText === 'true';
+  const rawValue = target.isContentEditable ? target.innerHTML : target.value;
+  const nextValue = isRichText ? sanitizeRichText(rawValue) : rawValue;
 
   if (target.closest('.item-editor')) {
     const itemNode = target.closest('.item-editor');
@@ -1018,19 +1311,19 @@ function handleSectionInput(event) {
       state.sections[sectionIndex].items[itemIndex][field] = target.checked;
     } else if (lang) {
       item[field] = cloneLangValue(item[field]);
-      item[field][lang] = target.value;
+      item[field][lang] = nextValue;
     } else {
-      state.sections[sectionIndex].items[itemIndex][field] = target.value;
+      state.sections[sectionIndex].items[itemIndex][field] = nextValue;
     }
   } else {
     if (lang) {
       state.sections[sectionIndex][field] = cloneLangValue(state.sections[sectionIndex][field]);
-      state.sections[sectionIndex][field][lang] = target.value;
+      state.sections[sectionIndex][field][lang] = nextValue;
     } else {
-      state.sections[sectionIndex][field] = target.value;
+      state.sections[sectionIndex][field] = nextValue;
     }
     if (field === 'id') {
-      const normalized = target.value.trim();
+      const normalized = nextValue.trim();
       state.sections[sectionIndex].headingId = normalized
         ? `h-${normalized.replace(/[^a-z0-9\-]/gi, '-').toLowerCase()}`
         : '';
@@ -1050,22 +1343,74 @@ function handleSectionInput(event) {
 }
 
 function handleSectionClick(event) {
-  const target = event.target;
-  if (target.classList.contains('add-item')) {
-    const sectionIndex = Number(target.closest('.section-editor').dataset.index);
-    addItem(sectionIndex);
+  const button = event.target.closest('button');
+  if (!button || !sectionsEditor.contains(button)) {
+    return;
   }
-  if (target.classList.contains('delete-item')) {
-    const sectionEditor = target.closest('.section-editor');
-    const itemEditor = target.closest('.item-editor');
-    const sectionIndex = Number(sectionEditor.dataset.index);
-    const itemIndex = Number(itemEditor.dataset.index);
-    deleteItem(sectionIndex, itemIndex);
+
+  const command = button.dataset.richCommand;
+  if (command) {
+    event.preventDefault();
+    const richField = button.closest('.rich-text-field');
+    const editor = richField?.querySelector('.rich-text-editor');
+    if (editor) {
+      editor.focus();
+      document.execCommand(command, false, null);
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    return;
   }
-  if (target.classList.contains('delete-section')) {
-    const sectionIndex = Number(target.closest('.section-editor').dataset.index);
-    if (confirm('Supprimer cette section ?')) {
+
+  if (button.classList.contains('add-item')) {
+    const sectionIndex = Number(button.closest('.section-editor')?.dataset.index ?? -1);
+    if (sectionIndex >= 0) {
+      addItem(sectionIndex);
+    }
+    return;
+  }
+
+  if (button.classList.contains('delete-item')) {
+    const sectionEditor = button.closest('.section-editor');
+    const itemEditor = button.closest('.item-editor');
+    const sectionIndex = Number(sectionEditor?.dataset.index ?? -1);
+    const itemIndex = Number(itemEditor?.dataset.index ?? -1);
+    if (sectionIndex >= 0 && itemIndex >= 0) {
+      deleteItem(sectionIndex, itemIndex);
+    }
+    return;
+  }
+
+  if (button.classList.contains('move-item-up') || button.classList.contains('move-item-down')) {
+    event.preventDefault();
+    event.stopPropagation();
+    const sectionEditor = button.closest('.section-editor');
+    const itemEditor = button.closest('.item-editor');
+    const sectionIndex = Number(sectionEditor?.dataset.index ?? -1);
+    const itemIndex = Number(itemEditor?.dataset.index ?? -1);
+    if (sectionIndex >= 0 && itemIndex >= 0) {
+      const direction = button.classList.contains('move-item-up') ? -1 : 1;
+      moveItem(sectionIndex, itemIndex, direction);
+    }
+    return;
+  }
+
+  if (button.classList.contains('delete-section')) {
+    event.preventDefault();
+    event.stopPropagation();
+    const sectionIndex = Number(button.closest('.section-editor')?.dataset.index ?? -1);
+    if (sectionIndex >= 0 && confirm('Supprimer cette section ?')) {
       deleteSection(sectionIndex);
+    }
+    return;
+  }
+
+  if (button.classList.contains('move-section-up') || button.classList.contains('move-section-down')) {
+    event.preventDefault();
+    event.stopPropagation();
+    const sectionIndex = Number(button.closest('.section-editor')?.dataset.index ?? -1);
+    if (sectionIndex >= 0) {
+      const direction = button.classList.contains('move-section-up') ? -1 : 1;
+      moveSection(sectionIndex, direction);
     }
   }
 }
@@ -1474,7 +1819,7 @@ function generateItemHtml(item, layout) {
   ];
 
   if (hasLangValue(item.description)) {
-    lines.push(`              <div class="subtitle">${renderLangInline(item.description, { multiline: true })}</div>`);
+    lines.push(`              <div class="subtitle">${renderLangInline(item.description, { multiline: true, richText: true, wrapperTag: 'div' })}</div>`);
   }
 
   lines.push('            </div>');
@@ -1499,6 +1844,21 @@ function updatePreview() {
   previewFrame.srcdoc = html;
 }
 
+function saveWork() {
+  if (!storageAvailable) {
+    alert("La sauvegarde locale n'est pas disponible dans ce navigateur.");
+    return;
+  }
+  try {
+    const payload = JSON.stringify(state);
+    window.localStorage.setItem(STORAGE_KEY, payload);
+    alert('Travail sauvegardé localement.');
+  } catch (error) {
+    console.error('Impossible de sauvegarder le travail :', error);
+    alert('Impossible de sauvegarder le travail. Vérifiez l\'espace disponible.');
+  }
+}
+
 function downloadHtml() {
   const html = generateHTML(state);
   const blob = new Blob([html], { type: 'text/html' });
@@ -1514,6 +1874,7 @@ function downloadHtml() {
 
 function resetTemplate() {
   if (!confirm('Réinitialiser la carte au modèle original ?')) return;
+  clearSavedWork();
   state = parseTemplate(defaultTemplate);
   renderHeaderEditor();
   renderThemeEditor();
@@ -1528,6 +1889,7 @@ function handleFileUpload(event) {
   reader.onload = () => {
     try {
       state = parseTemplate(String(reader.result));
+      clearSavedWork();
       renderHeaderEditor();
       renderThemeEditor();
       renderSections();
@@ -1547,6 +1909,9 @@ if (themeEditor) {
 sectionsEditor.addEventListener('input', handleSectionInput);
 sectionsEditor.addEventListener('click', handleSectionClick);
 addSectionBtn.addEventListener('click', addSection);
+if (saveBtn) {
+  saveBtn.addEventListener('click', saveWork);
+}
 downloadBtn.addEventListener('click', downloadHtml);
 resetBtn.addEventListener('click', resetTemplate);
 fileInput.addEventListener('change', handleFileUpload);
