@@ -924,6 +924,15 @@ function renderSections(options = {}) {
       itemsContainer.appendChild(itemNode);
     });
 
+    const moveUpBtn = sectionNode.querySelector('.move-section-up');
+    if (moveUpBtn) {
+      moveUpBtn.disabled = index === 0;
+    }
+    const moveDownBtn = sectionNode.querySelector('.move-section-down');
+    if (moveDownBtn) {
+      moveDownBtn.disabled = index === state.sections.length - 1;
+    }
+
     sectionsEditor.appendChild(sectionNode);
   });
 }
@@ -1000,6 +1009,18 @@ function deleteItem(sectionIndex, itemIndex) {
   updatePreview();
 }
 
+function moveSection(sectionIndex, direction) {
+  const targetIndex = sectionIndex + direction;
+  if (targetIndex < 0 || targetIndex >= state.sections.length) {
+    return;
+  }
+  const [section] = state.sections.splice(sectionIndex, 1);
+  state.sections.splice(targetIndex, 0, section);
+  const forceOpenUid = section?.uid ?? null;
+  renderSections({ forceOpenUid });
+  updatePreview();
+}
+
 function handleSectionInput(event) {
   const target = event.target;
   if (!target.dataset.field) return;
@@ -1050,22 +1071,47 @@ function handleSectionInput(event) {
 }
 
 function handleSectionClick(event) {
-  const target = event.target;
-  if (target.classList.contains('add-item')) {
-    const sectionIndex = Number(target.closest('.section-editor').dataset.index);
-    addItem(sectionIndex);
+  const button = event.target.closest('button');
+  if (!button || !sectionsEditor.contains(button)) {
+    return;
   }
-  if (target.classList.contains('delete-item')) {
-    const sectionEditor = target.closest('.section-editor');
-    const itemEditor = target.closest('.item-editor');
-    const sectionIndex = Number(sectionEditor.dataset.index);
-    const itemIndex = Number(itemEditor.dataset.index);
-    deleteItem(sectionIndex, itemIndex);
+
+  if (button.classList.contains('add-item')) {
+    const sectionIndex = Number(button.closest('.section-editor')?.dataset.index ?? -1);
+    if (sectionIndex >= 0) {
+      addItem(sectionIndex);
+    }
+    return;
   }
-  if (target.classList.contains('delete-section')) {
-    const sectionIndex = Number(target.closest('.section-editor').dataset.index);
-    if (confirm('Supprimer cette section ?')) {
+
+  if (button.classList.contains('delete-item')) {
+    const sectionEditor = button.closest('.section-editor');
+    const itemEditor = button.closest('.item-editor');
+    const sectionIndex = Number(sectionEditor?.dataset.index ?? -1);
+    const itemIndex = Number(itemEditor?.dataset.index ?? -1);
+    if (sectionIndex >= 0 && itemIndex >= 0) {
+      deleteItem(sectionIndex, itemIndex);
+    }
+    return;
+  }
+
+  if (button.classList.contains('delete-section')) {
+    event.preventDefault();
+    event.stopPropagation();
+    const sectionIndex = Number(button.closest('.section-editor')?.dataset.index ?? -1);
+    if (sectionIndex >= 0 && confirm('Supprimer cette section ?')) {
       deleteSection(sectionIndex);
+    }
+    return;
+  }
+
+  if (button.classList.contains('move-section-up') || button.classList.contains('move-section-down')) {
+    event.preventDefault();
+    event.stopPropagation();
+    const sectionIndex = Number(button.closest('.section-editor')?.dataset.index ?? -1);
+    if (sectionIndex >= 0) {
+      const direction = button.classList.contains('move-section-up') ? -1 : 1;
+      moveSection(sectionIndex, direction);
     }
   }
 }
