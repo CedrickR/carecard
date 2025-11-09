@@ -1046,6 +1046,14 @@ function renderSections(options = {}) {
       itemNode.querySelector('input[data-field="price"]').value = item.price || '';
       itemNode.querySelector('input[data-field="spanFull"]').checked = Boolean(item.spanFull);
       itemNode.querySelector('select[data-field="metaOrder"]').value = item.metaOrder || 'duration-first';
+      const moveUpBtn = itemNode.querySelector('.move-item-up');
+      if (moveUpBtn) {
+        moveUpBtn.disabled = itemIndex === 0;
+      }
+      const moveDownBtn = itemNode.querySelector('.move-item-down');
+      if (moveDownBtn) {
+        moveDownBtn.disabled = itemIndex === section.items.length - 1;
+      }
       itemsContainer.appendChild(itemNode);
     });
 
@@ -1131,6 +1139,20 @@ function deleteSection(sectionIndex) {
 function deleteItem(sectionIndex, itemIndex) {
   state.sections[sectionIndex].items.splice(itemIndex, 1);
   renderSections();
+  updatePreview();
+}
+
+function moveItem(sectionIndex, itemIndex, direction) {
+  const section = state.sections[sectionIndex];
+  if (!section) return;
+  const targetIndex = itemIndex + direction;
+  if (targetIndex < 0 || targetIndex >= section.items.length) {
+    return;
+  }
+  const [item] = section.items.splice(itemIndex, 1);
+  section.items.splice(targetIndex, 0, item);
+  const forceOpenUid = section?.uid ?? null;
+  renderSections({ forceOpenUid });
   updatePreview();
 }
 
@@ -1232,6 +1254,20 @@ function handleSectionClick(event) {
     const itemIndex = Number(itemEditor?.dataset.index ?? -1);
     if (sectionIndex >= 0 && itemIndex >= 0) {
       deleteItem(sectionIndex, itemIndex);
+    }
+    return;
+  }
+
+  if (button.classList.contains('move-item-up') || button.classList.contains('move-item-down')) {
+    event.preventDefault();
+    event.stopPropagation();
+    const sectionEditor = button.closest('.section-editor');
+    const itemEditor = button.closest('.item-editor');
+    const sectionIndex = Number(sectionEditor?.dataset.index ?? -1);
+    const itemIndex = Number(itemEditor?.dataset.index ?? -1);
+    if (sectionIndex >= 0 && itemIndex >= 0) {
+      const direction = button.classList.contains('move-item-up') ? -1 : 1;
+      moveItem(sectionIndex, itemIndex, direction);
     }
     return;
   }
