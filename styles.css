@@ -292,21 +292,41 @@ body {
   transition: transform 0.2s ease;
 }
 
+.section-editor summary .summary-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.section-editor summary .summary-button {
+  background: transparent;
+  border: 1px solid rgba(15, 118, 110, 0.45);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.section-editor summary .summary-button:not(:disabled):hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.section-editor summary .summary-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .section-editor[open] summary {
   border-bottom: 1px solid var(--border);
 }
 
 .section-editor[open] summary .summary-chevron::before {
   transform: rotate(90deg);
-}
-
-.section-editor .delete-section {
-  background: transparent;
-  border: 1px solid rgba(15, 118, 110, 0.5);
-  color: var(--accent);
-  border-radius: 999px;
-  padding: 0.35rem 0.75rem;
-  cursor: pointer;
 }
 
 .section-form {
