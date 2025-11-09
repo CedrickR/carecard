@@ -741,12 +741,59 @@ const headerEditor = document.getElementById('header-editor');
 const themeEditor = document.getElementById('theme-editor');
 const sectionsEditor = document.getElementById('sections-editor');
 const addSectionBtn = document.getElementById('add-section');
+const saveBtn = document.getElementById('save-btn');
 const downloadBtn = document.getElementById('download-btn');
 const resetBtn = document.getElementById('reset-btn');
 const fileInput = document.getElementById('file-input');
 const previewFrame = document.getElementById('preview-frame');
 const sectionTemplate = document.getElementById('section-template');
 const itemTemplate = document.getElementById('item-template');
+
+const STORAGE_KEY = 'carecard-editor-state';
+const storageAvailable = isStorageAvailable();
+
+function isStorageAvailable() {
+  if (typeof window === 'undefined' || !('localStorage' in window)) {
+    return false;
+  }
+  try {
+    const testKey = '__carecard_storage_test__';
+    window.localStorage.setItem(testKey, testKey);
+    window.localStorage.removeItem(testKey);
+    return true;
+  } catch (error) {
+    console.warn('Le stockage local est indisponible :', error);
+    return false;
+  }
+}
+
+function getSavedSnapshot() {
+  if (!storageAvailable) {
+    return null;
+  }
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+    return JSON.parse(raw);
+  } catch (error) {
+    console.warn('Impossible de lire la sauvegarde locale :', error);
+    clearSavedWork();
+    return null;
+  }
+}
+
+function clearSavedWork() {
+  if (!storageAvailable) {
+    return;
+  }
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    console.warn('Impossible de supprimer la sauvegarde locale :', error);
+  }
+}
 
 function createUid() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -755,9 +802,84 @@ function createUid() {
   return `section-${Math.random().toString(36).slice(2, 10)}-${Date.now()}`;
 }
 
+function hydrateRestoredState(raw) {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const headerSource = raw.header || {};
+  const sectionsSource = Array.isArray(raw.sections) ? raw.sections : [];
+  const footerSource = raw.footerNote;
+  const themeSource = raw.theme || {};
+
+  const hydrated = {
+    header: {
+      cardTitle: cloneLangValue(headerSource.cardTitle ?? createEmptyLangText()),
+      lead: cloneLangValue(headerSource.lead ?? createEmptyLangText()),
+      currencyNote: cloneLangValue(headerSource.currencyNote ?? createEmptyLangText()),
+    },
+    sections: sectionsSource.map((section, index) => {
+      const safeSection = section && typeof section === 'object' ? section : {};
+      const items = Array.isArray(safeSection.items) ? safeSection.items : [];
+      return {
+        id: safeSection.id ?? `section-${index + 1}`,
+        headingTag: safeSection.headingTag || 'h2',
+        headingId: safeSection.headingId || '',
+        title: cloneLangValue(safeSection.title ?? createEmptyLangText()),
+        note: cloneLangValue(safeSection.note ?? createEmptyLangText()),
+        layout: ['grid-2', 'grid-1', 'single'].includes(safeSection.layout) ? safeSection.layout : 'grid-2',
+        navLabel: cloneLangValue(safeSection.navLabel ?? safeSection.title ?? createEmptyLangText()),
+        items: items.map((item) => {
+          const safeItem = item && typeof item === 'object' ? item : {};
+          const description = cloneLangValue(safeItem.description ?? createEmptyLangText());
+          LANGUAGES.forEach(({ code }) => {
+            description[code] = sanitizeRichText(description[code]);
+          });
+          return {
+            title: cloneLangValue(safeItem.title ?? createEmptyLangText()),
+            description,
+            duration: safeItem.duration ? String(safeItem.duration) : '',
+            price: safeItem.price ? String(safeItem.price) : '',
+            spanFull: Boolean(safeItem.spanFull),
+            metaOrder: safeItem.metaOrder === 'price-first' ? 'price-first' : 'duration-first',
+          };
+        }),
+        uid: safeSection.uid || createUid(),
+      };
+    }),
+    footerNote: cloneLangValue(footerSource ?? createEmptyLangText()),
+    theme: { ...DEFAULT_THEME },
+  };
+
+  Object.entries(themeSource).forEach(([key, value]) => {
+    if (THEME_KEY_SET.has(key)) {
+      hydrated.theme[key] = String(value);
+    }
+  });
+
+  return hydrated;
+}
+
 function initialise() {
   try {
-    state = parseTemplate(defaultTemplate);
+    let initialState = null;
+    const snapshot = getSavedSnapshot();
+    if (snapshot) {
+      const shouldRestore = confirm('Une sauvegarde locale a été trouvée. Souhaitez-vous la restaurer ?');
+      if (shouldRestore) {
+        initialState = hydrateRestoredState(snapshot);
+        if (!initialState) {
+          console.warn('La sauvegarde locale est invalide et sera ignorée.');
+          clearSavedWork();
+        }
+      } else {
+        clearSavedWork();
+      }
+    }
+    if (!initialState) {
+      initialState = parseTemplate(defaultTemplate);
+    }
+    state = initialState;
     renderHeaderEditor();
     renderThemeEditor();
     renderSections();
@@ -1722,6 +1844,21 @@ function updatePreview() {
   previewFrame.srcdoc = html;
 }
 
+function saveWork() {
+  if (!storageAvailable) {
+    alert("La sauvegarde locale n'est pas disponible dans ce navigateur.");
+    return;
+  }
+  try {
+    const payload = JSON.stringify(state);
+    window.localStorage.setItem(STORAGE_KEY, payload);
+    alert('Travail sauvegardé localement.');
+  } catch (error) {
+    console.error('Impossible de sauvegarder le travail :', error);
+    alert('Impossible de sauvegarder le travail. Vérifiez l\'espace disponible.');
+  }
+}
+
 function downloadHtml() {
   const html = generateHTML(state);
   const blob = new Blob([html], { type: 'text/html' });
@@ -1737,6 +1874,7 @@ function downloadHtml() {
 
 function resetTemplate() {
   if (!confirm('Réinitialiser la carte au modèle original ?')) return;
+  clearSavedWork();
   state = parseTemplate(defaultTemplate);
   renderHeaderEditor();
   renderThemeEditor();
@@ -1751,6 +1889,7 @@ function handleFileUpload(event) {
   reader.onload = () => {
     try {
       state = parseTemplate(String(reader.result));
+      clearSavedWork();
       renderHeaderEditor();
       renderThemeEditor();
       renderSections();
@@ -1770,6 +1909,9 @@ if (themeEditor) {
 sectionsEditor.addEventListener('input', handleSectionInput);
 sectionsEditor.addEventListener('click', handleSectionClick);
 addSectionBtn.addEventListener('click', addSection);
+if (saveBtn) {
+  saveBtn.addEventListener('click', saveWork);
+}
 downloadBtn.addEventListener('click', downloadHtml);
 resetBtn.addEventListener('click', resetTemplate);
 fileInput.addEventListener('change', handleFileUpload);
