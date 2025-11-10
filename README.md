@@ -30,6 +30,18 @@ Application web pour éditer et prévisualiser la carte des soins RVB Spa.
 
 Le serveur Nginx intégré publie les fichiers statiques de l’éditeur et écoute sur les ports 80/443 dans le conteneur. Les mappages de ports et le nom d’hôte externe sont pilotés par le fichier `.env`.
 
+### Relais SMTP (optionnel)
+
+Mailpit reste le serveur de recette par défaut : il intercepte les messages émis depuis votre environnement sans les transmettre à l'extérieur. Si vous souhaitez tester un envoi réel, activez son mode relais en complétant les variables suivantes dans `.env` :
+
+- `SMTP_RELAY_ENABLE=true` pour activer la redirection.
+- `SMTP_RELAY_HOST` et `SMTP_RELAY_PORT` pour cibler le serveur de relais souhaité.
+- `SMTP_RELAY_USERNAME` / `SMTP_RELAY_PASSWORD` si le relais exige une authentification.
+- `SMTP_RELAY_STARTTLS` pour contrôler la négociation TLS (`auto`, `always` ou `never`).
+- `SMTP_RELAY_FROM` afin d'imposer une adresse d'expéditeur spécifique si nécessaire.
+
+Mailpit relayera alors chaque message intercepté vers le serveur configuré tout en conservant une copie consultable via son interface Web.
+
 ### Configuration du bouton « Envoyer par e-mail »
 
 - Définissez la variable `MAIL_RECIPIENT` dans `.env` (ex. `MAIL_RECIPIENT=communication@exemple.com`).
