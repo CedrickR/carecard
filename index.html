@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestion de la carte des soins RVB Spa</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="branding">
+        <h1>Gestionnaire de carte des soins RVB Spa</h1>
+        <p>
+          Importez, modifiez et générez la carte des soins 2025 grâce à une
+          interface visuelle. Ajoutez, réorganisez ou supprimez des sections et
+          leurs lignes en toute simplicité.
+        </p>
+      </div>
+      <div class="actions">
+        <label class="file-input">
+          <input type="file" id="file-input" accept="text/html,.html" />
+          <span>Charger un fichier HTML</span>
+        </label>
+        <button id="download-btn" type="button">Télécharger le HTML</button>
+        <button id="send-mail-btn" type="button">Envoyer par e-mail</button>
+        <button id="reset-btn" type="button">Réinitialiser le modèle</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="editor" aria-label="Éditeur de contenu">
+        <h2>Sections de la carte</h2>
+        <div id="header-editor" class="card"></div>
+        <div id="theme-editor" class="card"></div>
+        <div id="sections-editor" class="card"></div>
+        <button id="add-section" class="add-section" type="button">
+          + Ajouter une section
+        </button>
+      </section>
+      <section class="preview" aria-label="Aperçu en direct">
+        <div class="preview-header">
+          <h2>Aperçu de la carte générée</h2>
+          <p>
+            Les modifications sont prévisualisées automatiquement. Le rendu
+            ci-dessous reflète exactement le fichier HTML téléchargé.
+          </p>
+        </div>
+        <iframe id="preview-frame" title="Aperçu de la carte"></iframe>
+      </section>
+    </main>
+
+    <template id="section-template">
+      <details class="section-editor">
+        <summary>
+          <div class="summary-main">
+            <span class="summary-chevron" aria-hidden="true"></span>
+            <span class="section-label"></span>
+          </div>
+          <button type="button" class="delete-section">Supprimer</button>
+        </summary>
+        <div class="section-form">
+          <div class="field-group">
+            <label>
+              Identifiant (ancre)
+              <input type="text" data-field="id" />
+            </label>
+          </div>
+          <div class="multilang-field">
+            <span class="group-label">Titre de la section</span>
+            <label class="lang-field">
+              <span class="lang-flag" aria-hidden="true">🇫🇷</span>
+              <span>Français</span>
+              <input type="text" data-field="title.fr" />
+            </label>
+            <label class="lang-field">
+              <span class="lang-flag" aria-hidden="true">🇬🇧</span>
+              <span>English</span>
+              <input type="text" data-field="title.en" />
+            </label>
+          </div>
+          <div class="multilang-field">
+            <span class="group-label">Libellé dans le sommaire</span>
+            <label class="lang-field">
+              <span class="lang-flag" aria-hidden="true">🇫🇷</span>
+              <span>Français</span>
+              <input type="text" data-field="navLabel.fr" />
+            </label>
+            <label class="lang-field">
+              <span class="lang-flag" aria-hidden="true">🇬🇧</span>
+              <span>English</span>
+              <input type="text" data-field="navLabel.en" />
+            </label>
+          </div>
+          <div class="multilang-field">
+            <span class="group-label">Note (facultatif)</span>
+            <label class="lang-field">
+              <span class="lang-flag" aria-hidden="true">🇫🇷</span>
+              <span>Français</span>
+              <textarea rows="2" data-field="note.fr"></textarea>
+            </label>
+            <label class="lang-field">
+              <span class="lang-flag" aria-hidden="true">🇬🇧</span>
+              <span>English</span>
+              <textarea rows="2" data-field="note.en"></textarea>
+            </label>
+          </div>
+          <label>
+            Type de disposition
+            <select data-field="layout">
+              <option value="grid-2">Grille 2 colonnes</option>
+              <option value="grid-1">Grille 1 colonne</option>
+              <option value="single">Liste simple</option>
+            </select>
+          </label>
+          <div class="items" data-role="items"></div>
+          <button type="button" class="add-item">+ Ajouter une ligne</button>
+        </div>
+      </details>
+    </template>
+
+    <template id="item-template">
+      <fieldset class="item-editor">
+        <legend>Ligne</legend>
+        <div class="multilang-field">
+          <span class="group-label">Titre</span>
+          <label class="lang-field">
+            <span class="lang-flag" aria-hidden="true">🇫🇷</span>
+            <span>Français</span>
+            <input type="text" data-field="title.fr" />
+          </label>
+          <label class="lang-field">
+            <span class="lang-flag" aria-hidden="true">🇬🇧</span>
+            <span>English</span>
+            <input type="text" data-field="title.en" />
+          </label>
+        </div>
+        <div class="multilang-field">
+          <span class="group-label">Description</span>
+          <label class="lang-field">
+            <span class="lang-flag" aria-hidden="true">🇫🇷</span>
+            <span>Français</span>
+            <textarea rows="2" data-field="description.fr"></textarea>
+          </label>
+          <label class="lang-field">
+            <span class="lang-flag" aria-hidden="true">🇬🇧</span>
+            <span>English</span>
+            <textarea rows="2" data-field="description.en"></textarea>
+          </label>
+        </div>
+        <div class="field-group">
+          <label>
+            Durée
+            <input type="text" data-field="duration" placeholder="(60 mins)" />
+          </label>
+          <label>
+            Tarif
+            <input type="text" data-field="price" placeholder="500 dh" />
+          </label>
+        </div>
+        <label>
+          Ordre des informations
+          <select data-field="metaOrder">
+            <option value="duration-first">Durée puis tarif</option>
+            <option value="price-first">Tarif puis durée</option>
+          </select>
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" data-field="spanFull" />
+          Étendre sur toute la largeur (grilles uniquement)
+        </label>
+        <div class="item-actions">
+          <button type="button" class="delete-item">Supprimer la ligne</button>
+        </div>
+      </fieldset>
+    </template>
+
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  carecard:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "${HTTP_PORT:-8003}:80"
+      - "${HTTPS_PORT:-8443}:443"
+    depends_on:
+      - mailpit
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:latest
+    env_file:
+      - .env
+    environment:
+      MP_RELAY_HOST: "${SMTP_RELAY_HOST:-}"
+      MP_RELAY_PORT: "${SMTP_RELAY_PORT:-587}"
+      MP_RELAY_USERNAME: "${SMTP_RELAY_USERNAME:-}"
+      MP_RELAY_PASSWORD: "${SMTP_RELAY_PASSWORD:-}"
+      MP_RELAY_MAIL_FROM: "${SMTP_RELAY_FROM:-}"
+      MP_RELAY_STARTTLS: "${SMTP_RELAY_STARTTLS:-auto}"
+      MP_RELAY_ALL: "${SMTP_RELAY_ENABLE:-false}"
+    ports:
+      - "${MAIL_SMTP_PORT:-1025}:1025"
+      - "${MAIL_WEB_PORT:-8025}:8025"
+    restart: unless-stopped
