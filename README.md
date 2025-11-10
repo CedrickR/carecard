@@ -11,15 +11,23 @@ Application web pour éditer et prévisualiser la carte des soins RVB Spa.
 
 ## Démarrage rapide avec Docker
 
-1. Construire et lancer le conteneur :
+1. Dupliquer le fichier d'exemple `.env.example` vers `.env` puis, au besoin, adapter les ports et le nom d'hôte :
+
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Construire et lancer les services (éditeur + serveur mail de développement) :
 
    ```bash
    docker compose up --build
    ```
 
-2. Ouvrir le navigateur sur [http://127.0.0.1:8003](http://127.0.0.1:8003).
+3. Ouvrir le navigateur sur l'adresse sécurisée indiquée dans `.env` (par défaut [https://carecard.local:8443](https://carecard.local:8443)). Le certificat auto-signé se trouve dans l'image Docker ; acceptez l'exception de sécurité lors du premier accès. Pensez à ajouter `carecard.local` à votre fichier `/etc/hosts` ou remplacez `SITE_HOST` par `localhost` si vous ne souhaitez pas modifier ce fichier.
 
-Le serveur Nginx intégré publie les fichiers statiques de l’éditeur et écoute sur le port 80 dans le conteneur. Le port 8003 est exposé côté hôte via `docker-compose.yml`.
+4. Accéder à l'interface du serveur mail via [http://127.0.0.1:8025](http://127.0.0.1:8025) (valeur configurable dans `.env`). Les emails envoyés depuis votre environnement de développement y seront listés.
+
+Le serveur Nginx intégré publie les fichiers statiques de l’éditeur et écoute sur les ports 80/443 dans le conteneur. Les mappages de ports et le nom d’hôte externe sont pilotés par le fichier `.env`.
 
 ## Plugin WordPress « RVB – Éditeur Carte des Soins »
 

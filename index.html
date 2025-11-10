@@ -21,7 +21,6 @@
           <input type="file" id="file-input" accept="text/html,.html" />
           <span>Charger un fichier HTML</span>
         </label>
-        <button id="save-btn" type="button">Sauvegarder le travail</button>
         <button id="download-btn" type="button">Télécharger le HTML</button>
         <button id="reset-btn" type="button">Réinitialiser le modèle</button>
       </div>
@@ -56,11 +55,7 @@
             <span class="summary-chevron" aria-hidden="true"></span>
             <span class="section-label"></span>
           </div>
-          <div class="summary-actions" aria-label="Actions sur la section">
-            <button type="button" class="summary-button move-section-up" aria-label="Monter la section">Haut</button>
-            <button type="button" class="summary-button move-section-down" aria-label="Descendre la section">Bas</button>
-            <button type="button" class="summary-button delete-section">Supprimer</button>
-          </div>
+          <button type="button" class="delete-section">Supprimer</button>
         </summary>
         <div class="section-form">
           <div class="field-group">
@@ -143,94 +138,12 @@
           <label class="lang-field">
             <span class="lang-flag" aria-hidden="true">🇫🇷</span>
             <span>Français</span>
-            <div class="rich-text-field">
-              <div
-                class="rich-text-toolbar"
-                role="toolbar"
-                aria-label="Outils de mise en forme pour la description en français"
-              >
-                <button
-                  type="button"
-                  class="rich-text-button"
-                  data-rich-command="bold"
-                  aria-label="Mettre en gras"
-                >
-                  <span aria-hidden="true">G</span>
-                </button>
-                <button
-                  type="button"
-                  class="rich-text-button"
-                  data-rich-command="italic"
-                  aria-label="Mettre en italique"
-                >
-                  <span aria-hidden="true">I</span>
-                </button>
-                <button
-                  type="button"
-                  class="rich-text-button"
-                  data-rich-command="insertUnorderedList"
-                  aria-label="Insérer une liste à puces"
-                >
-                  <span aria-hidden="true">•</span>
-                </button>
-              </div>
-              <div
-                class="rich-text-editor"
-                contenteditable="true"
-                data-field="description.fr"
-                data-rich-text="true"
-                role="textbox"
-                aria-multiline="true"
-                aria-label="Description en français"
-                data-placeholder="Ajouter une description (optionnel)"
-              ></div>
-            </div>
+            <textarea rows="2" data-field="description.fr"></textarea>
           </label>
           <label class="lang-field">
             <span class="lang-flag" aria-hidden="true">🇬🇧</span>
             <span>English</span>
-            <div class="rich-text-field">
-              <div
-                class="rich-text-toolbar"
-                role="toolbar"
-                aria-label="Formatting tools for the English description"
-              >
-                <button
-                  type="button"
-                  class="rich-text-button"
-                  data-rich-command="bold"
-                  aria-label="Bold"
-                >
-                  <span aria-hidden="true">B</span>
-                </button>
-                <button
-                  type="button"
-                  class="rich-text-button"
-                  data-rich-command="italic"
-                  aria-label="Italic"
-                >
-                  <span aria-hidden="true">I</span>
-                </button>
-                <button
-                  type="button"
-                  class="rich-text-button"
-                  data-rich-command="insertUnorderedList"
-                  aria-label="Insert bullet list"
-                >
-                  <span aria-hidden="true">•</span>
-                </button>
-              </div>
-              <div
-                class="rich-text-editor"
-                contenteditable="true"
-                data-field="description.en"
-                data-rich-text="true"
-                role="textbox"
-                aria-multiline="true"
-                aria-label="English description"
-                data-placeholder="Add a description (optional)"
-              ></div>
-            </div>
+            <textarea rows="2" data-field="description.en"></textarea>
           </label>
         </div>
         <div class="field-group">
@@ -255,20 +168,6 @@
           Étendre sur toute la largeur (grilles uniquement)
         </label>
         <div class="item-actions">
-          <button
-            type="button"
-            class="move-item-up"
-            aria-label="Monter la ligne"
-          >
-            Haut
-          </button>
-          <button
-            type="button"
-            class="move-item-down"
-            aria-label="Descendre la ligne"
-          >
-            Bas
-          </button>
           <button type="button" class="delete-item">Supprimer la ligne</button>
         </div>
       </fieldset>

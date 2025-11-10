@@ -3,6 +3,20 @@ version: "3.8"
 services:
   carecard:
     build: .
+    env_file:
+      - .env
     ports:
-      - "8003:80"
+      - "${HTTP_PORT:-8003}:80"
+      - "${HTTPS_PORT:-8443}:443"
+    depends_on:
+      - mailpit
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:latest
+    env_file:
+      - .env
+    ports:
+      - "${MAIL_SMTP_PORT:-1025}:1025"
+      - "${MAIL_WEB_PORT:-8025}:8025"
     restart: unless-stopped
