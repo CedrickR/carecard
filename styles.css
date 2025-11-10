@@ -73,6 +73,16 @@ body {
   transform: translateY(-1px);
 }
 
+.actions button:disabled {
+  background: rgba(15, 118, 110, 0.35);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.actions button:disabled:hover {
+  background: rgba(15, 118, 110, 0.35);
+}
+
 .file-input {
   position: relative;
   overflow: hidden;

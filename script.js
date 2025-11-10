@@ -431,6 +431,13 @@ const defaultTemplate = `<!-- ====== CARTE DES SOINS 2025 — RVB SPA (HTML temp
 </section>
 <!-- ====== /CARTE DES SOINS 2025 ====== -->`;
 
+const APP_CONFIG = (() => {
+  const source = typeof window !== 'undefined' ? window.CARECARD_CONFIG : null;
+  const mailRecipient =
+    source && typeof source.mailRecipient === 'string' ? source.mailRecipient : '';
+  return { mailRecipient };
+})();
+
 const LANGUAGES = [
   { code: 'fr', label: 'Français', flag: '🇫🇷' },
   { code: 'en', label: 'English', flag: '🇬🇧' },
@@ -555,6 +562,14 @@ function cloneLangValue(value) {
   return clone;
 }
 
+function getMailRecipient() {
+  if (!APP_CONFIG) {
+    return '';
+  }
+  const raw = APP_CONFIG.mailRecipient;
+  return typeof raw === 'string' ? raw.trim() : '';
+}
+
 const DEFAULT_THEME = {
   c1: '#0f766e',
   c2: '#0ea5a4',
@@ -618,11 +633,23 @@ const themeEditor = document.getElementById('theme-editor');
 const sectionsEditor = document.getElementById('sections-editor');
 const addSectionBtn = document.getElementById('add-section');
 const downloadBtn = document.getElementById('download-btn');
+const sendMailBtn = document.getElementById('send-mail-btn');
 const resetBtn = document.getElementById('reset-btn');
 const fileInput = document.getElementById('file-input');
 const previewFrame = document.getElementById('preview-frame');
 const sectionTemplate = document.getElementById('section-template');
 const itemTemplate = document.getElementById('item-template');
+
+if (sendMailBtn) {
+  const recipient = getMailRecipient();
+  if (!recipient) {
+    sendMailBtn.disabled = true;
+    sendMailBtn.title =
+      'Configurez la variable MAIL_RECIPIENT dans votre fichier .env pour activer l\'envoi par e-mail.';
+  } else {
+    sendMailBtn.title = `Envoyer la carte à ${recipient}`;
+  }
+}
 
 function createUid() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -1499,6 +1526,56 @@ function updatePreview() {
   previewFrame.srcdoc = html;
 }
 
+function sendMail() {
+  const recipient = getMailRecipient();
+  if (!recipient) {
+    alert('Aucune adresse e-mail de destination n\'est configurée. Vérifiez la variable MAIL_RECIPIENT.');
+    return;
+  }
+  if (!state) {
+    alert('La carte n\'est pas encore prête à être envoyée.');
+    return;
+  }
+
+  const subjectValue = normaliseLangValue(state.header?.cardTitle);
+  const subjectText = subjectValue.fr || subjectValue.en || 'Carte des soins 2025';
+  downloadHtml();
+
+  const now = new Date();
+  const formattedDate = (() => {
+    try {
+      return new Intl.DateTimeFormat('fr-FR', {
+        dateStyle: 'long',
+        timeStyle: 'short',
+      }).format(now);
+    } catch (error) {
+      return now.toLocaleString();
+    }
+  })();
+
+  const bodyLines = [
+    'Bonjour,',
+    '',
+    'Veuillez joindre le fichier HTML téléchargé automatiquement à ce message.',
+    'Il contient la dernière version de la carte des soins RVB Spa.',
+    '',
+    'Hello,',
+    '',
+    'Please attach the automatically downloaded HTML file to this email.',
+    'It contains the latest version of the RVB Spa care card.',
+    '',
+    `Généré automatiquement le ${formattedDate}.`,
+  ];
+
+  const mailtoUrl = `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(
+    subjectText
+  )}&body=${encodeURIComponent(bodyLines.join('\n'))}`;
+
+  window.setTimeout(() => {
+    window.location.href = mailtoUrl;
+  }, 250);
+}
+
 function downloadHtml() {
   const html = generateHTML(state);
   const blob = new Blob([html], { type: 'text/html' });
@@ -1548,5 +1625,8 @@ sectionsEditor.addEventListener('input', handleSectionInput);
 sectionsEditor.addEventListener('click', handleSectionClick);
 addSectionBtn.addEventListener('click', addSection);
 downloadBtn.addEventListener('click', downloadHtml);
+if (sendMailBtn) {
+  sendMailBtn.addEventListener('click', sendMail);
+}
 resetBtn.addEventListener('click', resetTemplate);
 fileInput.addEventListener('change', handleFileUpload);

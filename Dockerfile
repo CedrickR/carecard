@@ -5,6 +5,7 @@ FROM nginx:stable-alpine
 COPY index.html /usr/share/nginx/html/index.html
 COPY styles.css /usr/share/nginx/html/styles.css
 COPY script.js /usr/share/nginx/html/script.js
+COPY config.js /usr/share/nginx/html/config.js
 
 # Copy SSL material and Nginx template
 COPY docker/certs/carecard.local.crt /etc/nginx/certs/carecard.local.crt

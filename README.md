@@ -8,10 +8,11 @@ Application web pour éditer et prévisualiser la carte des soins RVB Spa.
 - Gestion des sections et des lignes (ajout, duplication manuelle, suppression) avec mise à jour automatique de l'ancre et du sommaire.
 - Personnalisation fine de la palette via des variables CSS exportées dans le fichier généré.
 - Import / export du fichier HTML final pour intégration côté site ou plugin WordPress.
+- Téléchargement du HTML et envoi rapide par e-mail vers une adresse configurable via `.env`.
 
 ## Démarrage rapide avec Docker
 
-1. Dupliquer le fichier d'exemple `.env.example` vers `.env` puis, au besoin, adapter les ports et le nom d'hôte :
+1. Dupliquer le fichier d'exemple `.env.example` vers `.env` puis, au besoin, adapter les ports, le nom d'hôte et l'adresse `MAIL_RECIPIENT` utilisée par le bouton d'envoi :
 
    ```bash
    cp .env.example .env
@@ -28,6 +29,13 @@ Application web pour éditer et prévisualiser la carte des soins RVB Spa.
 4. Accéder à l'interface du serveur mail via [http://127.0.0.1:8025](http://127.0.0.1:8025) (valeur configurable dans `.env`). Les emails envoyés depuis votre environnement de développement y seront listés.
 
 Le serveur Nginx intégré publie les fichiers statiques de l’éditeur et écoute sur les ports 80/443 dans le conteneur. Les mappages de ports et le nom d’hôte externe sont pilotés par le fichier `.env`.
+
+### Configuration du bouton « Envoyer par e-mail »
+
+- Définissez la variable `MAIL_RECIPIENT` dans `.env` (ex. `MAIL_RECIPIENT=communication@exemple.com`).
+- Au démarrage des conteneurs, le script d'entrypoint génère automatiquement `config.js` avec cette valeur pour alimenter l'interface.
+- Si aucune adresse n'est fournie, le bouton reste grisé avec un message d'aide.
+- Lorsque vous cliquez sur **Envoyer par e-mail**, l'éditeur télécharge d'abord le fichier HTML puis ouvre votre client de messagerie avec un message prérempli (FR/EN) adressé au destinataire configuré ; il ne reste plus qu'à joindre le fichier téléchargé.
 
 ## Plugin WordPress « RVB – Éditeur Carte des Soins »
 
